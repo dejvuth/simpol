@@ -1,0 +1,20 @@
+{
+  "name": "proc",
+  "version": "0.0.1",
+  "authors": [
+    "dejvuth <dejvuth@gmail.com>"
+  ],
+  "main": "index.html",
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "bootstrap": "~3.3.6",
+    "d3": "~3.5.15"
+  }
+}

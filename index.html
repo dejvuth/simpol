@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Population</title>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <!-- Bootstrap -->
+    <link href="bower_components/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" media="screen"/>
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+
+    <link href="proc.css" rel="stylesheet"/>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-md-3">
+          <div class="bs-sidebar">
+            <div class="form-group">
+              <label class="btn btn-primary" for="inputFile">File input</label>
+              <input type="file" id="inputFile" style="display:none;">
+              <p id="selFile" class="help-block">No file selected</p>
+
+              <button id="draw" class="btn btn-primary" type="submit">Draw</button>
+            </div>
+
+            <div id="ruleDiv">
+            </div>
+
+            <hr/>
+
+            <form id="initForm" class="form-horizontal">
+            </form>
+          </div>
+        </div>
+
+        <div id="content" class="col-md-9">
+        </div>
+      </div>
+    </div>
+
+
+    <script type="text/javascript" src="bower_components/d3/d3.js"></script>
+    <script type="text/javascript" src="proc.js"></script>
+
+    <script src="bower_components/jquery/dist/jquery.js"></script>
+    <script src="bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+  </body>
+</html>
+
