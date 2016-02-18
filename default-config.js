@@ -5,22 +5,25 @@ states = {
     "init": 10
   },
   "AN": {
-    "color": "red",
-    "label": 0,
-    "init": 40
+    "color": "yellow",
+    "label": 2,
+    "init": 11
   },
   "PY": {
-    "color": "yellow",
-    "label": 1
+    "color": "green",
+    "label": 3,
+    "init": 5
   },
   "PN": {
-    "color": "orange",
-    "label": 0
+    "color": "yellow",
+    "label": 4,
+    "init": 3
   }
 };
 rules = [
   "AY, AN -> PY, PY",
   "AY, PN -> AY, PY",
   "AN, PY -> AN, PN",
-  "PY, PN -> PY, PY"
+  "PY, PN -> PY, PY",
+  //"PN, PN -> PY, PY",
 ];
