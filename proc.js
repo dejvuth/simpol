@@ -351,7 +351,7 @@ function drawContent() {
   }
   var r = (Math.min(h/row, inits.colMax/column) - padding*2)/2;
 
-  // Adjust "too-small" columns by taking space from the biggest one
+  // Adjust "too-small" columns
   var minColSize = 2*(r + padding);
   var colSizeDiff = 0;
   for (var i = 0; i < inits.s.length; i++) {
@@ -360,17 +360,18 @@ function drawContent() {
       inits.s[i].col = minColSize;
     }
   }
-  if (colSizeDiff > 0) {
+  /*if (colSizeDiff > 0) {
     for (var i = 0; i < inits.s.length; i++) {
-      if (inits.s[i].num == inits.max) {
-        inits.s[i].col -= colSizeDiff;
+      if (inits.s[i].col > minColSize) {
+        inits.s[i].col -= (inits.s[i].col/w)*colSizeDiff;
         break;
       }
     }
-  }
+  }*/
 
-  /*var maxRowCount = inits.max/(Math.floor(inits.colMax/(2*(r+padding))));
-  colSizeDiff = 0;
+  // Adjust "too-long" columns
+  var maxRowCount = inits.max/(Math.floor(inits.colMax/(2*(r+padding))));
+  //colSizeDiff = 0;
   for (var i = 0; i < inits.s.length; i++) {
     var maxPerRow = Math.floor(inits.s[i].col/(2*(r+padding)));
     var rowCount = Math.ceil(inits.s[i].num/maxPerRow);
@@ -380,10 +381,10 @@ function drawContent() {
       colSizeDiff += diff;
     }
   }
-  if (colSizeDiff > 0) {
+  /*if (colSizeDiff > 0) {
     for (var i = 0; i < inits.s.length; i++) {
-      if (inits.s[i].num == inits.max) {
-        inits.s[i].col -= colSizeDiff;
+      if (inits.s[i].col > 2*minColSize) {
+        inits.s[i].col -= (inits.s[i].col/w)*colSizeDiff;
         break;
       }
     }
@@ -409,11 +410,11 @@ function drawContent() {
   }
 
   // Create SVG
-  //var realw = 2*(r+padding);
+  var realw = w + colSizeDiff;
   realh = h + 100 + 80;
   svg = d3.select("#content")
   	.append("svg")
-  	.attr("width", w)
+  	.attr("width", realw)
   	.attr("height", realh);
 
   // Draw circles
