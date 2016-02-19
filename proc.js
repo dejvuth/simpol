@@ -1,4 +1,4 @@
-const colors = {
+var COLORS = {
   "magenta": "#F49AC2",
   "violet": "#CB99C9",
   "darkred": "#C23B22",
@@ -17,8 +17,6 @@ const colors = {
   "darkblue": "#779ECB",
   "darkpurple": "#966FD6",
 };
-
-//const FONT_SIZES = [ 8, 10, 12, 14, 18, 24, 30, 36, 48, 60, 76, 84 ];
 
 var states;
 var rules;
@@ -69,6 +67,7 @@ function parseRules(rr) {
 // GLOBAL CONFIGS
 var w = 500;
 var h = 300;
+var padding = 1;
 var rpadding = 5;
 var rw = 200;
 //var rh;
@@ -84,6 +83,64 @@ var rsvg;
 
 var inits;
 var objs;
+
+// Draw init
+function drawInit() {
+  var f = d3.select("#initDiv");
+  var count = 0;
+  var d;
+  for (var s in states) {
+    // Draw state
+    if (count % 2 == 0)
+      d = f.append("div").classed("form-group", true);
+    var l = d.append("label")
+      .attr("for", s)
+      .classed({"col-xs-2": true, "control-label": true})
+      .style("padding-top", "0px");
+    var isvg = l.append("svg").attr("width", 2*(ruler)).attr("height", 2*(ruler));
+    isvg.append("circle")
+      .attr("cx", ruler)
+      .attr("cy", ruler)
+      .attr("r", ruler)
+      .attr("fill", function(d) {
+        return COLORS[states[s].color];
+      })
+      .attr("opacity", opacity);;
+    isvg.append("text")
+      .text(states[s].label)
+      .attr("x", ruler)
+      .attr("y", ruler)
+      .attr("text-anchor", "middle")
+      .attr("dy", "0.3em")
+      .attr("font-family", "sans-serif")
+      .attr("font-size", defaultFontSize)
+      .attr("font-weight", "bold");
+
+    // Append input for number of states
+    d.append("div").classed("col-xs-4", true)
+      .append("input").attr("id", s).attr("type", "number").attr("placeholder", s)
+      .classed("form-control", true)
+      .attr("value", states[s].init);
+
+    count++;
+  }
+
+  // Append redraw button
+  /*var d = f.append("div").classed("form-group", true);
+  d.append("div").classed({ "col-xs-offset-2": true, "col-xs-8": true })
+    .append("button").attr("id", "redraw")
+    .classed({ "btn": true, "btn-primary": true, "btn-block": true })
+    .text("Redraw")
+    .on("click", function() {
+      for (s in states) {
+        var n = Number(d3.select("#" + s).property("value"));
+        //states[s].init = (n) ? n : 0;
+        states[s].init = n;
+      }
+      drawContent();
+    });*/
+}
+
 
 function drawRule() {
   var rh = 2*(ruler+rpadding)*robjs.length;
@@ -118,7 +175,7 @@ function drawRule() {
     })
     .attr("r", ruler)
     .attr("fill", function(d) {
-      return colors[states[d[1]].color];
+      return COLORS[states[d[1]].color];
     })
     .attr("fill-opacity", opacity);
 
@@ -179,114 +236,6 @@ function drawRule() {
     .attr("marker-end", "url(#triangle)");
 }
 
-// Stopt the simulator
-function stop() {
-  run = false;
-  d3.select("#run").text("Run >>");
-  d3.select("#step").style({"pointer-events": "all"});
-}
-
-function drawControl() {
-  var d = d3.select("#controlDiv");
-  var e = d.append("div").classed("form-group", true);
-
-  // Add step button
-  e.append("button").attr("id", "step")
-    .classed({ "btn": true, "btn-primary": true, "col-xs-offset-1": true, "col-xs-4": true })
-    .text("Step >")
-    .on("click", function() {
-      if (run)
-        return;
-      sim("next");
-    });
-
-  // Add run button
-  e.append("button").attr("id", "run")
-    .classed({ "btn": true, "btn-primary": true, "col-xs-offset-1": true, "col-xs-4": true })
-    .text("Run >>")
-    .on("click", function() {
-      if (!run) {
-        run = true;
-        d3.select("#run").text("[Stop]");
-        d3.select("#step").style({"pointer-events": "none"});
-        sim("run");
-      } else {
-        stop();
-      }
-    });
-
-  // Add delay control
-  var e = d.append("div").classed("form-group", true);
-  e.append("label")
-    .attr("for", "delay")
-    .classed({"col-sm-2": true, "control-label": true})
-    .text("Delay");
-  e.append("div").classed({"col-sm-8": true})
-    .append("input").attr("id", "delay")
-    .attr("type", "range")
-    .attr("min", 0).attr("max", 3000)
-    .attr("value", delay).attr("step", 100)
-    .classed({ "form-control-static": true })
-    .on("change", function(d) {
-      delay = d3.select(this).property("value");
-      localStorage.setItem("delay", delay);
-    });
-
-  d.append("hr");
-}
-
-// Draw init
-function drawInit() {
-  var f = d3.select("#initDiv");
-  for (var s in states) {
-    // Draw state
-    var d = f.append("div").classed("form-group", true);
-    var l = d.append("label")
-      .attr("for", s)
-      .classed({"col-xs-offset-2": true, "col-xs-2": true, "control-label": true})
-      .style("padding-top", "0px");
-    var isvg = l.append("svg").attr("width", 2*(ruler)).attr("height", 2*(ruler));
-    isvg.append("circle")
-      .attr("cx", ruler)
-      .attr("cy", ruler)
-      .attr("r", ruler)
-      .attr("fill", function(d) {
-        return colors[states[s].color];
-      })
-      .attr("opacity", opacity);;
-    isvg.append("text")
-      .text(states[s].label)
-      .attr("x", ruler)
-      .attr("y", ruler)
-      .attr("text-anchor", "middle")
-      .attr("dy", "0.3em")
-      .attr("font-family", "sans-serif")
-      .attr("font-size", defaultFontSize)
-      .attr("font-weight", "bold");
-
-    // Append input for number of states
-    d.append("div").classed("col-xs-5", true)
-      .append("input").attr("id", s).attr("type", "number").attr("placeholder", s)
-      .classed("form-control", true)
-      .attr("value", states[s].init);
-  }
-
-  // Append redraw button
-  var d = f.append("div").classed("form-group", true);
-  d.append("div").classed({ "col-xs-offset-2": true, "col-xs-8": true })
-    .append("button").attr("id", "redraw")
-    .classed({ "btn": true, "btn-primary": true, "btn-block": true })
-    .text("Redraw")
-    .on("click", function() {
-      for (s in states) {
-        var n = Number(d3.select("#" + s).property("value"));
-        //states[s].init = (n) ? n : 0;
-        states[s].init = n;
-      }
-      drawContent();
-    });
-}
-
 // Preprocess init-states information
 function preprocess(states) {
   var names = [];
@@ -334,12 +283,6 @@ function drawContent() {
   // Preprocess
   inits = preprocess(states);
 
-  // Calculate padding: range [1,5]
-  //var paddingThreshold = 350;
-  //var padding = (inits.sum >= paddingThreshold) ? 1
-    //: Math.floor((paddingThreshold-inits.sum)/paddingThreshold*4) + 2;
-  var padding = 1;
-
   // Calculate radius
   var row = 1;
   var colPerRow = inits.colMax/h;
@@ -360,18 +303,9 @@ function drawContent() {
       inits.s[i].col = minColSize;
     }
   }
-  /*if (colSizeDiff > 0) {
-    for (var i = 0; i < inits.s.length; i++) {
-      if (inits.s[i].col > minColSize) {
-        inits.s[i].col -= (inits.s[i].col/w)*colSizeDiff;
-        break;
-      }
-    }
-  }*/
 
   // Adjust "too-long" columns
   var maxRowCount = inits.max/(Math.floor(inits.colMax/(2*(r+padding))));
-  //colSizeDiff = 0;
   for (var i = 0; i < inits.s.length; i++) {
     var maxPerRow = Math.floor(inits.s[i].col/(2*(r+padding)));
     var rowCount = Math.ceil(inits.s[i].num/maxPerRow);
@@ -381,15 +315,6 @@ function drawContent() {
       colSizeDiff += diff;
     }
   }
-  /*if (colSizeDiff > 0) {
-    for (var i = 0; i < inits.s.length; i++) {
-      if (inits.s[i].col > 2*minColSize) {
-        inits.s[i].col -= (inits.s[i].col/w)*colSizeDiff;
-        break;
-      }
-    }
-  }*/
-
 
   // Prepare DOM objects
   objs = [];
@@ -411,34 +336,11 @@ function drawContent() {
 
   // Create SVG
   var realw = w + colSizeDiff;
-  realh = h + 100 + 80;
+  realh = h + 40;
   svg = d3.select("#content")
   	.append("svg")
   	.attr("width", realw)
   	.attr("height", realh);
-
-  // Draw circles
-//  svg.selectAll("circle")
-//    .data(objs)
-//    .enter()
-//    .append("circle")
-//    .attr("class", "node")
-//    .attr("id", function(d, i) {
-//      return "c" + i;
-//    })
-//    .attr("cx", function(d, i) {
-//      return d["cx"];
-//    })
-//    .attr("cy", function(d, i) {
-//      return d["cy"];
-//    })
-//    .attr("r", function(d, i) {
-//      return r;
-//    })
-//    .attr("fill", function(d) {
-//      return colors[states[d["name"]].color];
-//    })
-//    .attr("opacity", opacity);
 
   // Draw rect
   svg.selectAll("rect")
@@ -458,7 +360,7 @@ function drawContent() {
     .attr("width", 2*r)
     .attr("height", 2*r)
     .attr("fill", function(d) {
-      return colors[states[d["name"]].color];
+      return COLORS[states[d["name"]].color];
     })
     .attr("opacity", opacity);
 
@@ -467,7 +369,6 @@ function drawContent() {
   var fontScale = d3.scale.threshold()
     .domain([10, 30, 60, 100, 200, 300, 400])
     .range([40, 22, 18, 16, 14, 12, 10, 8]);
-  //console.log("fontSize: " + fontScale(objs.length));
   svg.selectAll("text")
     .data(objs)
     .enter()
@@ -489,17 +390,60 @@ function drawContent() {
     .attr("font-family", "sans-serif")
     .attr("font-size", fontScale(objs.length))
     .attr("font-weight", "bold");
+}
 
+// Stopt the simulator
+function stop() {
+  run = false;
+  d3.select("#run").text("Run >>");
+  d3.select("#step").style({"pointer-events": "all"});
+}
 
-  // Draw log
-  svg.append("text")
-    .text("")
-    .attr("id", "log")
-    .attr("x", w/2)
-    .attr("y", realh - 40)
-    .attr("text-anchor", "middle")
-    .attr("font-family", "sans-serif")
-    .attr("font-size", "11");
+function drawControl() {
+  var d = d3.select("#controlDiv");
+  var e = d.append("div").classed("form-group", true);
+
+  // Add step button
+  e.append("button").attr("id", "step")
+    .classed({ "btn": true, "btn-primary": true, "col-xs-offset-1": true, "col-xs-3": true })
+    .text("Step >")
+    .on("click", function() {
+      if (run)
+        return;
+      sim("next");
+    });
+
+  // Add run button
+  e.append("button").attr("id", "run")
+    .classed({ "btn": true, "btn-primary": true, "col-xs-offset-1": true, "col-xs-3": true })
+    .text("Run >>")
+    .on("click", function() {
+      if (!run) {
+        run = true;
+        d3.select("#run").text("[Stop]");
+        d3.select("#step").style({"pointer-events": "none"});
+        sim("run");
+      } else {
+        stop();
+      }
+    });
+
+  // Add delay control
+  var e = d.append("div").classed("form-group", true);
+  e.append("label")
+    .attr("for", "delay")
+    .classed({"col-sm-2": true, "control-label": true})
+    .text("Delay");
+  e.append("div").classed({"col-sm-6": true})
+    .append("input").attr("id", "delay")
+    .attr("type", "range")
+    .attr("min", 0).attr("max", 3000)
+    .attr("value", delay).attr("step", 100)
+    .classed({ "form-control-static": true })
+    .on("change", function(d) {
+      delay = d3.select(this).property("value");
+      localStorage.setItem("delay", delay);
+    });
 }
 
 // Random [0, max)
@@ -523,9 +467,6 @@ sim = function(mode) {
   while (n == null) {
     pick++;
     if (pick > maxPick) {
-//      humane.log("No applicable rules");
-//      svg.select("#log")
-//        .text("No applicable rules");
       toastr.info("No applicable rules");
       stop();
       return;
@@ -556,15 +497,10 @@ sim = function(mode) {
     .attr("stroke", "none");
   rsvg.selectAll(".rule" + rid)
      .attr("stroke", function() {
-      return colors["brown"];
+      return COLORS["brown"];
     })
     .attr("stroke-width", "3")
     .attr("stroke-opacity", "0.9");
-
-  // Write log
-  svg.selectAll("#log")
-    .text("[#" + (stepCount++) + "] " + objs[t[0]].name + " " + objs[t[1]].name
-          + " ->  " + n[0] + " " + n[1]);
 
   objs[t[0]].name = n[0];
   objs[t[1]].name = n[1];
@@ -580,16 +516,12 @@ sim = function(mode) {
   svg.selectAll(sels)
     .transition()
     .duration(delay)
-/*    .attr("stroke", function() {
-      return colors["brown"];
-    })
-    .attr("stroke-width", "3")*/
     .each("end", function(d, i) {
       svg.select("#c" + t[i])
         .transition()
         .duration(delay)
         .attr("fill", function() {
-          return colors[states[n[i]].color];
+          return COLORS[states[n[i]].color];
         });
 
       var x = svg.select("#t" + t[i])
@@ -607,56 +539,76 @@ sim = function(mode) {
 }
 
 function draw() {
-  d3.select("#ruleDiv").selectAll("*").remove();
-  d3.select("#controlDiv").selectAll("*").remove();
   d3.select("#initDiv").selectAll("*").remove();
+  d3.select("#ruleDiv").selectAll("*").remove();
   d3.select("#content").selectAll("*").remove();
+  d3.select("#controlDiv").selectAll("*").remove();
 
-  drawRule();
-  drawControl();
   drawInit();
+  drawRule();
   drawContent();
+  drawControl();
 }
 
-d3.select("#inputFile")
-  .on("change", function() {
-    fileName = d3.select(this).property("value").replace(/^C:\\fakepath\\/, "");
-    d3.select("#selFile").text(fileName);
-
-  });
-
-d3.select("#draw")
-  .on("click", function() {
-    try {
-       var file = d3.select("#inputFile").property("files")[0];
-       if (!file) {
-         toastr.error("File not found");
-         return;
-       }
-       var reader = new FileReader();
-       reader.onload = function(e) {
-         try {
-           eval(reader.result);
-           inrules = parseRules(rules);
-           draw();
-         } catch (err) {
-           if (err.message)
-             toastr.error("Syntax error: " + err.message);
-           else if (err.lastIndexOf("Warning", 0) === 0)
-             toastr.warning(err.replace(/^Warning: /, ""));
-           else
-             toastr.error(err);
-         }
-       }
-
-       reader.readAsText(file);
+// Load and draw
+function load() {
+  try {
+    // Read file
+    var file = d3.select("#load").property("files")[0];
+    if (!file) {
+      toastr.error("File not found");
+      return;
     }
-    catch (err) {
-      console.log(err.message);
+    var reader = new FileReader();
+    reader.onload = function(e) {
+    try {
+      eval(reader.result);
+      inrules = parseRules(rules);
+      draw();
+    } catch (err) {
       if (err.message)
-        toastr.error(err.message);
+        toastr.error("Syntax error: " + err.message);
+      else if (err.lastIndexOf("Warning", 0) === 0)
+        toastr.warning(err.replace(/^Warning: /, ""));
       else
         toastr.error(err);
+      }
     }
+    reader.readAsText(file);
+  }
+  catch (err) {
+    console.log(err.message);
+    if (err.message)
+      toastr.error(err.message);
+    else
+      toastr.error(err);
+  }
+}
+
+// Add load event
+d3.select("#load")
+  .on("change", function() {
+    // Display file name
+    fileName = d3.select(this).property("value").replace(/^C:\\fakepath\\/, "");
+    d3.select("#selFile").text(fileName);
+    load();
   });
+
+// Add reload event
+d3.select("#reload")
+  .on("click", function() {
+    load();
+  });
+
+// Add draw event
+d3.select("#draw")
+  .on("click", function() {
+    // Read numbers of states
+    for (s in states) {
+      var n = Number(d3.select("#" + s).property("value"));
+      states[s].init = n;
+    }
+    drawContent();
+  });
+
 

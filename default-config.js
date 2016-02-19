@@ -2,12 +2,12 @@ states = {
   "AY": {
     "color": "green",
     "label": 1,
-    "init": 10
+    "init": 39
   },
   "AN": {
-    "color": "yellow",
+    "color": "red",
     "label": 2,
-    "init": 11
+    "init": 40
   },
   "PY": {
     "color": "green",
@@ -15,9 +15,9 @@ states = {
     "init": 5
   },
   "PN": {
-    "color": "yellow",
+    "color": "red",
     "label": 4,
-    "init": 3
+    "init": 4
   }
 };
 rules = [
