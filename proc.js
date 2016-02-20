@@ -1,4 +1,4 @@
-var COLORS = {
+var colors = {
   "magenta": "#F49AC2",
   "violet": "#CB99C9",
   "darkred": "#C23B22",
@@ -112,7 +112,7 @@ function drawInit() {
       .attr("cy", ruler)
       .attr("r", ruler)
       .attr("fill", function(d) {
-        return COLORS[states[s].color];
+        return colors[states[s].color];
       })
       .attr("opacity", opacity);;
     isvg.append("text")
@@ -171,7 +171,7 @@ function drawRule() {
     })
     .attr("r", ruler)
     .attr("fill", function(d) {
-      return COLORS[states[d[1]].color];
+      return colors[states[d[1]].color];
     })
     .attr("fill-opacity", opacity);
 
@@ -359,7 +359,7 @@ function drawContent() {
     .attr("width", 2*r)
     .attr("height", 2*r)
     .attr("fill", function(d) {
-      return COLORS[states[d["name"]].color];
+      return colors[states[d["name"]].color];
     })
     .attr("fill-opacity", opacity);
 
@@ -534,7 +534,7 @@ sim = function(mode) {
   // Highlight rule
   rsvg.selectAll(".rule" + rid)
     .attr("stroke", function() {
-      return COLORS["brown"];
+      return colors["brown"];
     })
     .attr("stroke-width", "3")
     .attr("stroke-opacity", "0.9")
@@ -555,7 +555,7 @@ sim = function(mode) {
     .duration(delay);
   if (highlightState) {
     sl.attr("stroke", function() {
-      return COLORS["brown"];
+      return colors["brown"];
     });
   }
   sl.attr("stroke-width", "3")
@@ -575,7 +575,7 @@ sim = function(mode) {
         .transition()
         .duration(delay)
         .attr("fill", function() {
-          return COLORS[states[n[i]].color];
+          return colors[states[n[i]].color];
         });
 
       // Restart if mode is "run"
