@@ -18,6 +18,7 @@ var COLORS = {
   "darkpurple": "#966FD6",
 };
 
+var outputs;
 var states;
 var rules;
 
@@ -28,6 +29,13 @@ function parseRules(rr) {
   for (var s in states) {
     if (!s.match(/^\w+$/)) {
       throw "State name " + s + " is not alphanumeric";
+    }
+
+    if (states[s].hasOwnProperty("output")) {
+      if (!outputs.hasOwnProperty(states[s].output))
+        throw "Output " + states[s].output + " not found";
+
+      states[s].color = outputs[states[s].output].color;
     }
   }
 
@@ -70,7 +78,7 @@ var h = 300;
 var padding = 1;
 var rpadding = 5;
 var rw = 200;
-//var rh;
+var highlightState = true;
 var delay = localStorage.getItem("delay");
 if (!delay)
   delay = 500;
@@ -96,7 +104,8 @@ function drawInit() {
     var l = d.append("label")
       .attr("for", s)
       .classed({"col-xs-2": true, "control-label": true})
-      .style("padding-top", "0px");
+      .style("padding-top", "0px")
+      .style("text-align", "right");
     var isvg = l.append("svg").attr("width", 2*(ruler)).attr("height", 2*(ruler));
     isvg.append("circle")
       .attr("cx", ruler)
@@ -125,23 +134,10 @@ function drawInit() {
     count++;
   }
 
-  // Append redraw button
-  /*var d = f.append("div").classed("form-group", true);
-  d.append("div").classed({ "col-xs-offset-2": true, "col-xs-8": true })
-    .append("button").attr("id", "redraw")
-    .classed({ "btn": true, "btn-primary": true, "btn-block": true })
-    .text("Redraw")
-    .on("click", function() {
-      for (s in states) {
-        var n = Number(d3.select("#" + s).property("value"));
-        //states[s].init = (n) ? n : 0;
-        states[s].init = n;
-      }
-      drawContent();
-    });*/
+  f.append("hr");
 }
 
-
+// Draw rules
 function drawRule() {
   var rh = 2*(ruler+rpadding)*robjs.length;
   rsvg = d3.select("#ruleDiv")
@@ -238,6 +234,9 @@ function drawRule() {
 
 // Preprocess init-states information
 function preprocess(states) {
+  if (!states)
+    throw "Nothing to draw";
+
   var names = [];
   var nums = [];
   var sum = 0;
@@ -362,7 +361,7 @@ function drawContent() {
     .attr("fill", function(d) {
       return COLORS[states[d["name"]].color];
     })
-    .attr("opacity", opacity);
+    .attr("fill-opacity", opacity);
 
 
   // Draw labels
@@ -392,13 +391,14 @@ function drawContent() {
     .attr("font-weight", "bold");
 }
 
-// Stopt the simulator
+// Stop the simulator
 function stop() {
   run = false;
   d3.select("#run").text("Run >>");
   d3.select("#step").style({"pointer-events": "all"});
 }
 
+// Draw controls
 function drawControl() {
   var d = d3.select("#controlDiv");
   var e = d.append("div").classed("form-group", true);
@@ -437,7 +437,7 @@ function drawControl() {
   e.append("div").classed({"col-sm-6": true})
     .append("input").attr("id", "delay")
     .attr("type", "range")
-    .attr("min", 0).attr("max", 3000)
+    .attr("min", 0).attr("max", 2000)
     .attr("value", delay).attr("step", 100)
     .classed({ "form-control-static": true })
     .on("change", function(d) {
@@ -461,18 +461,57 @@ sim = function(mode) {
     return;
 
   var pick = 0;
-  var t = [-1, -1];
-  var rid;
-  var n;
+  var t = [-1, -1];  // current states
+  var rid;  // rule id
+  var n;    // next states
   while (n == null) {
     pick++;
-    if (pick > maxPick) {
-      toastr.info("No applicable rules");
-      stop();
-      return;
+
+    if (pick <= maxPick) {
+      // Randomly pick two states
+      t[0] = random(inits.sum);
+      t[1] = random(inits.sum);
+    } else {
+      // Manually find two states
+      var found = false;
+
+      // Find the first remaining state for each type
+      var remains = {};
+      for (var i = 0; i < objs.length; i++) {
+        if (!remains.hasOwnProperty(objs[i].name)) {
+          remains[objs[i].name] = [i];
+        } else {
+          remains[objs[i].name].push(i);
+        }
+      }
+
+      // Loop for each pair of remains
+      loop1:
+      for (var l1 in remains) {
+        if (!inrules.hasOwnProperty(l1))
+          continue;
+        for (var l2 in remains) {
+          if (!inrules[l1].hasOwnProperty(l2))
+            continue;
+          found = true;
+          if (l1 == l2) {
+            t[0] = remains[l1][0];
+            t[1] = remains[l1][1];
+          } else {
+            t[0] = remains[l1][0];
+            t[1] = remains[l2][0];
+          }
+          break loop1;
+        }
+      }
+
+      // No states and rules found
+      if (!found) {
+        toastr.info("No applicable rules");
+        stop();
+        return;
+      }
     }
-    t[0] = random(inits.sum);
-    t[1] = random(inits.sum);
     var m = inrules[objs[t[0]].name];
     if (m == null) {
       m = inrules[objs[t[1]].name];
@@ -493,51 +532,68 @@ sim = function(mode) {
   }
 
   // Highlight rule
-  rsvg.selectAll(".rule")
-    .attr("stroke", "none");
   rsvg.selectAll(".rule" + rid)
-     .attr("stroke", function() {
+    .attr("stroke", function() {
       return COLORS["brown"];
     })
     .attr("stroke-width", "3")
-    .attr("stroke-opacity", "0.9");
+    .attr("stroke-opacity", "0.9")
+    .transition()
+    .duration(2*delay)
+    .each("end", function() {
+      rsvg.selectAll(".rule" + rid)
+        .attr("stroke", "none");
+    });
 
   objs[t[0]].name = n[0];
   objs[t[1]].name = n[1];
 
-  // Remove previous selections
-  if (sels != null) {
-    svg.selectAll(".node")
-      .attr("stroke", "none");
-  }
-
   sels = [ "#c"+t[0], "#c"+t[1] ];
 
-  svg.selectAll(sels)
+  var sl = svg.selectAll(sels)
     .transition()
-    .duration(delay)
+    .duration(delay);
+  if (highlightState) {
+    sl.attr("stroke", function() {
+      return COLORS["brown"];
+    });
+  }
+  sl.attr("stroke-width", "3")
+    .attr("stroke-opacity", "0.9")
     .each("end", function(d, i) {
-      svg.select("#c" + t[i])
+
+      // Change label
+      svg.select("#t" + t[i])
+        .transition()
+        .duration(delay)
+        .text(function() {
+          return states[n[i]].label;
+        });
+
+      // Fill new color
+      var x = svg.select("#c" + t[i])
         .transition()
         .duration(delay)
         .attr("fill", function() {
           return COLORS[states[n[i]].color];
         });
 
-      var x = svg.select("#t" + t[i])
-        .transition()
-        .duration(delay)
-        .text(function() {
-          return states[n[i]].label;
-        });
-      if (mode == "run")
+      // Restart if mode is "run"
+      if (mode == "run") {
         x.each("end", function() {
+          svg.select("#c" + t[i]).attr("stroke", "none");
           if (i%2 == 0)
             sim("run");
         });
+      } else {
+        x.each("end", function() {
+          svg.select("#c" + t[i]).attr("stroke", "none");
+        });
+      }
     });
 }
 
+// Draw everything
 function draw() {
   d3.select("#initDiv").selectAll("*").remove();
   d3.select("#ruleDiv").selectAll("*").remove();
@@ -548,6 +604,16 @@ function draw() {
   drawRule();
   drawContent();
   drawControl();
+}
+
+// Toast the error
+function toast(err) {
+  if (err.message)
+    toastr.error("Syntax error: " + err.message);
+  else if (err.lastIndexOf("Warning", 0) === 0)
+    toastr.warning(err.replace(/^Warning: /, ""));
+  else
+    toastr.error(err);
 }
 
 // Load and draw
@@ -561,27 +627,18 @@ function load() {
     }
     var reader = new FileReader();
     reader.onload = function(e) {
-    try {
-      eval(reader.result);
-      inrules = parseRules(rules);
-      draw();
-    } catch (err) {
-      if (err.message)
-        toastr.error("Syntax error: " + err.message);
-      else if (err.lastIndexOf("Warning", 0) === 0)
-        toastr.warning(err.replace(/^Warning: /, ""));
-      else
-        toastr.error(err);
+      try {
+        eval(reader.result);
+        inrules = parseRules(rules);
+        draw();
+      } catch (err) {
+        toast(err);
       }
     }
     reader.readAsText(file);
   }
   catch (err) {
-    console.log(err.message);
-    if (err.message)
-      toastr.error(err.message);
-    else
-      toastr.error(err);
+    toast(err);
   }
 }
 
@@ -608,7 +665,11 @@ d3.select("#draw")
       var n = Number(d3.select("#" + s).property("value"));
       states[s].init = n;
     }
-    drawContent();
-  });
 
+    try {
+      drawContent();
+    } catch (err) {
+      toast(err);
+    }
+  });
 

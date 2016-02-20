@@ -8,24 +8,24 @@ outputs = {
 };
 states = {
   "AY": {
-    "color": "green",
+    "output": "yes",
     "label": 1,
-    "init": 39
+    "init": 40
   },
   "AN": {
-    "color": "red",
+    "output": "no",
     "label": 2,
-    "init": 4
+    "init": 20
   },
   "PY": {
-    "color": "green",
+    "output": "yes",
     "label": 3,
-    "init": 5
+    "init": 10
   },
   "PN": {
-    "color": "red",
+    "output": "no",
     "label": 4,
-    "init": 4
+    "init": 5
   },
 };
 rules = [
