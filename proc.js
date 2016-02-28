@@ -18,6 +18,7 @@ var colors = {
   "darkpurple": "#966FD6",
 };
 
+var title;
 var outputs;
 var states;
 var rules;
@@ -79,13 +80,18 @@ var padding = 1;
 var rpadding = 5;
 var rw = 200;
 var highlightState = true;
-var delay = localStorage.getItem("delay");
-if (!delay)
-  delay = 500;
+var delay = 500;
+if (localStorage.hasOwnProperty("delay"))
+  delay = localStorage.getItem("delay");
 var ruler = 15;  // rule radius
 var maxPick = 1000;
-var opacity = 0.3;
+var opacity = 0.5;
 var defaultFontSize = 16;
+var showLabel = true;
+if (localStorage.hasOwnProperty("showLabel")) {
+  showLabel = localStorage.getItem("showLabel") === "true";
+}
+
 var svg;
 var rsvg;
 
@@ -388,7 +394,8 @@ function drawContent() {
     .attr("dy", "0.3em")
     .attr("font-family", "sans-serif")
     .attr("font-size", fontScale(objs.length))
-    .attr("font-weight", "bold");
+    .attr("font-weight", "bold")
+    .attr("opacity", (showLabel) ? 1 : 0);;
 }
 
 // Stop the simulator
@@ -404,8 +411,9 @@ function drawControl() {
   var e = d.append("div").classed("form-group", true);
 
   // Add step button
-  e.append("button").attr("id", "step")
-    .classed({ "btn": true, "btn-primary": true, "col-xs-offset-1": true, "col-xs-3": true })
+  e.append("div").classed({ "col-xs-3": true })
+    .append("button").attr("id", "step")
+    .classed({ "btn": true, "btn-primary": true, "btn-block": true })
     .text("Step >")
     .on("click", function() {
       if (run)
@@ -414,8 +422,9 @@ function drawControl() {
     });
 
   // Add run button
-  e.append("button").attr("id", "run")
-    .classed({ "btn": true, "btn-primary": true, "col-xs-offset-1": true, "col-xs-3": true })
+  e.append("div").classed({ "col-xs-3": true })
+    .append("button").attr("id", "run")
+    .classed({ "btn": true, "btn-primary": true, "btn-block": true })
     .text("Run >>")
     .on("click", function() {
       if (!run) {
@@ -428,13 +437,40 @@ function drawControl() {
       }
     });
 
+  // Add label button
+  var ls = e.append("div").classed({ "col-xs-3": true })
+    //.append("button").attr("id", "removeLabel")
+    //.classed({ "btn": true, "btn-primary": true, "btn-block": true })
+    //.attr("data-toggle", "button")
+    //.text("Labels")
+    //.on("click", function() {
+    //});
+    .append("input")
+    .attr("id", "labelSwitch")
+    .attr("name", "labelSwitch")
+    .attr("type", "checkbox")
+    .attr("data-label-text", "Label");
+  if (showLabel) {
+    ls.attr("checked", "");
+  }
+  $("[name='labelSwitch']").bootstrapSwitch();
+  $('input[name="labelSwitch"]').on('switchChange.bootstrapSwitch', function(event, state) {
+    showLabel = state;
+    localStorage.setItem("showLabel", showLabel);
+    svg.selectAll("text").attr("opacity", (showLabel) ? 1 : 0);
+  });
+
+
   // Add delay control
-  var e = d.append("div").classed("form-group", true);
-  e.append("label")
+  var e = d.append("div").classed({ "form-group": true })
+    .append("div").classed({ "col-xs-9": true });
+  e.append("div").classed({"col-sm-1": true}).style("padding-left", "0px")
+    .append("label")
     .attr("for", "delay")
-    .classed({"col-sm-2": true, "control-label": true})
+    .classed({"control-label": true})
+    //.style("margin-bottom", "0px")
     .text("Delay");
-  e.append("div").classed({"col-sm-6": true})
+  e.append("div").classed({"col-sm-11": true})
     .append("input").attr("id", "delay")
     .attr("type", "range")
     .attr("min", 0).attr("max", 2000)
@@ -628,7 +664,9 @@ function load() {
     var reader = new FileReader();
     reader.onload = function(e) {
       try {
+        // Eval the result
         eval(reader.result);
+        d3.select("#title").html((title) ? title : "&nbsp;");
         inrules = parseRules(rules);
         draw();
       } catch (err) {

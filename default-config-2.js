@@ -1,3 +1,5 @@
+title = "";
+opacity = 0.5;
 outputs = {
   "yes": {
     "color": "green"
@@ -10,12 +12,12 @@ states = {
   "AY": {
     "output": "yes",
     "label": 1,
-    "init": 40
+    "init": 400
   },
   "AN": {
     "output": "no",
     "label": 2,
-    "init": 20
+    "init": 200
   },
   "PY": {
     "output": "yes",
@@ -32,6 +34,6 @@ rules = [
   "AY, AN -> PY, PY",
   "AY, PN -> AY, PY",
   "AN, PY -> AN, PN",
-  "PY, PN -> PY, PY",
+  //"PY, PN -> PY, PY",
   //"PN, PN -> PY, PY",
 ];

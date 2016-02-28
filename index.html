@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <!-- Bootstrap -->
     <link href="bower_components/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" media="screen"/>
+    <link href="bower_components/bootstrap-switch/dist/css/bootstrap3/bootstrap-switch.min.css" rel="stylesheet" media="screen"/>
     <link href="bower_components/toastr/toastr.min.css" rel="stylesheet" media="screen"/>
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
@@ -21,6 +22,7 @@
     <div class="container">
       <div class="row">
         <div class="col-md-4" style="margin-top: 15px;">
+          <p id="selFile" class="help-block">No file selected</p>
           <div class="form-horizontal" style="">
             <div class="form-group">
               <div class="col-xs-4">
@@ -44,7 +46,7 @@
         </div>
 
         <div class="col-md-8" style="margin-top: 15px; box-shadow: -1px 0 0 #eee;">
-          <p id="selFile" class="help-block">No file selected</p>
+          <p id="title" class="help-block"></p>
           <div id="content">
           </div>
 
@@ -58,9 +60,11 @@
     <script type="text/javascript" src="bower_components/d3/d3.js"></script>
     <script type="text/javascript" src="bower_components/jquery/dist/jquery.js"></script>
     <script type="text/javascript" src="bower_components/toastr/toastr.min.js"></script>
-    <script type="text/javascript" src="proc.js"></script>
 
     <script src="bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+    <script src="bower_components/bootstrap-switch/dist/js/bootstrap-switch.min.js"></script>
+
+    <script type="text/javascript" src="proc.js"></script>
   </body>
 </html>
 
