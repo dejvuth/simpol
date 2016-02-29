@@ -685,7 +685,8 @@ d3.select("#load")
   .on("change", function() {
     // Display file name
     fileName = d3.select(this).property("value").replace(/^C:\\fakepath\\/, "");
-    d3.select("#selFile").text(fileName);
+    d3.select("#selFile").text("File: " + fileName);
+    d3.select("#ruleH").text("Rules");
     load();
   });
 

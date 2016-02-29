@@ -1,5 +1,5 @@
-title = "";
-opacity = 0.5;
+title = "MAJORITY";
+//opacity = 0.6;
 outputs = {
   "yes": {
     "color": "green"
@@ -12,28 +12,28 @@ states = {
   "AY": {
     "output": "yes",
     "label": 1,
-    "init": 400
+    "init": 40
   },
   "AN": {
     "output": "no",
     "label": 2,
-    "init": 200
+    "init": 20
   },
   "PY": {
     "output": "yes",
     "label": 3,
-    "init": 10
+    "init": 0
   },
   "PN": {
     "output": "no",
     "label": 4,
-    "init": 5
+    "init": 0
   },
 };
 rules = [
   "AY, AN -> PY, PY",
   "AY, PN -> AY, PY",
   "AN, PY -> AN, PN",
-  //"PY, PN -> PY, PY",
+  "PY, PN -> PY, PY",
   //"PN, PN -> PY, PY",
 ];

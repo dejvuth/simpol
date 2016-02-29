@@ -1,11 +1,3 @@
-outputs = {
-  "yes": {
-    "color": "green"
-  },
-  "no": {
-    "color": "red"
-  },
-};
 states = {
   "AY": {
     "color": "green",
@@ -33,5 +25,4 @@ rules = [
   "AY, PN -> AY, PY",
   "AN, PY -> AN, PN",
   "PY, PN -> PY, PY",
-  //"PN, PN -> PY, PY",
 ];
