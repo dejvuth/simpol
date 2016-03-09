@@ -23,7 +23,7 @@ var outputs;
 var states;
 var rules;
 
-// Parse raw rules to JSON object
+// Parses raw rules to JSON object
 // Rule: s1, s2 -> t1, t2
 var inrules;  // map s1 -> (s2 -> { id, r: [t1, t2] }), where s1 <= s2
 var robjs;    // [ states: [[id,s1], [id,s2], [id,t1], [id,t2]] ]
@@ -46,12 +46,12 @@ function parseRules(rr) {
   for (var i = 0; i < rr.length; i++) {
     var lr = rr[i].match(/\w+/g);
 
-    // Count states in rule
+    // Counts states in rule
     if (lr.length != 4) {
         throw "Rule error: " + rr[i];
     }
 
-    // Check whether states exist
+    // Checks whether states exist
     for (var j = 0; j < lr.length; j++) {
       if (!states[lr[j]]) {
         throw "Unknwon state " + lr[j] + " in rule: " + rr[i];
@@ -98,21 +98,26 @@ var showLabel = true;
 if (localStorage.hasOwnProperty("showLabel")) {
   showLabel = localStorage.getItem("showLabel") === "true";
 }
+var simTime = true;
+if (localStorage.hasOwnProperty("simTime")) {
+  simTime = localStorage.getItem("simTime") === "true";
+}
+
 
 var svg;
 var rsvg;
 
 var inits;
 var objs;  // array of state names
-var rems;  // map state names to remaining numbers of states
+var rems;  // maps state names to remaining numbers of states
 
-// Draw init
+// Draws init
 function drawInit() {
   var f = d3.select("#initDiv");
   var count = 0;
   var d;
   for (var s in states) {
-    // Draw state
+    // Draws state
     if (count % 2 == 0)
       d = f.append("div").classed("form-group", true);
     var l = d.append("label")
@@ -139,7 +144,7 @@ function drawInit() {
       .attr("font-size", defaultFontSize)
       .attr("font-weight", "bold");
 
-    // Append input for number of states
+    // Appends input for number of states
     d.append("div").classed("col-xs-4", true)
       .append("input").attr("id", s).attr("type", "number").attr("placeholder", s)
       .classed("form-control", true)
@@ -151,7 +156,7 @@ function drawInit() {
   f.append("hr");
 }
 
-// Draw rules
+// Draws rules
 function drawRule() {
   var rh = 2*(ruler+rpadding)*robjs.length;
   rsvg = d3.select("#ruleDiv")
@@ -159,7 +164,7 @@ function drawRule() {
   	.attr("width", rw)
   	.attr("height", rh);
 
-    // Draw rule circles
+    // Draws rule circles
   rsvg.selectAll("rules")
     .data(robjs)
     .enter()
@@ -189,7 +194,7 @@ function drawRule() {
     })
     .attr("fill-opacity", opacity);
 
-  // Draw rule states
+  // Draws rule states
   rsvg.selectAll("rules")
     .data(robjs)
     .enter()
@@ -216,7 +221,7 @@ function drawRule() {
     .attr("font-size", defaultFontSize)
     .attr("font-weight", "bold");
 
-  // Draw rule arrows
+  // Draws rule arrows
   rsvg.append("marker")
     .attr("id", "triangle")
     .attr("viewBox", "0 0 10 10")
@@ -245,7 +250,7 @@ function drawRule() {
     .attr("marker-end", "url(#triangle)");
 }
 
-// Preprocess init-states information
+// Preprocesses init-states information
 function preprocess(states) {
   if (!states)
     throw "Nothing to draw";
@@ -286,16 +291,16 @@ function preprocess(states) {
   return inits;
 }
 
-// Draw the content
+// Draws the content
 function drawContent() {
   if (svg != null)
     svg.remove();
   stepCount = 0;
 
-  // Preprocess
+  // Preprocesses
   inits = preprocess(states);
 
-  // Calculate radius
+  // Calculates radius
   var row = 1;
   var colPerRow = inits.colMax/h;
   var column = Math.floor(colPerRow * row)
@@ -306,7 +311,7 @@ function drawContent() {
   }
   var r = (Math.min(h/row, inits.colMax/column) - padding*2)/2;
 
-  // Adjust "too-small" columns
+  // Adjusts "too-small" columns
   var minColSize = 2*(r + padding);
   var colSizeDiff = 0;
   for (var i = 0; i < inits.s.length; i++) {
@@ -316,7 +321,7 @@ function drawContent() {
     }
   }
 
-  // Adjust "too-long" columns
+  // Adjusts "too-long" columns
   var maxRowCount = inits.max/(Math.floor(inits.colMax/(2*(r+padding))));
   for (var i = 0; i < inits.s.length; i++) {
     var maxPerRow = Math.floor(inits.s[i].col/(2*(r+padding)));
@@ -328,12 +333,11 @@ function drawContent() {
     }
   }
 
-  // Prepare DOM objects
+  // Prepares DOM objects
   objs = [];
   var offset = 0;
   var dy = h/row;
   for (var i = 0; i < inits.s.length; i++) {
-    //rems[inits.s[i].name] = inits.s[i].num;
     var maxPerRow = Math.max(Math.floor(inits.s[i].col/(2*(r+padding))), 1);
     for (var j = 0; j < inits.s[i].num; j++) {
       objs.push({
@@ -345,7 +349,7 @@ function drawContent() {
     offset += maxPerRow*2*(r+padding);
   }
 
-  // Prepare rems
+  // Prepares rems
   rems = {};
   for (var s in states) {
     var i = states[s].init;
@@ -355,7 +359,7 @@ function drawContent() {
       rems[s] = i;
   }
 
-  // Create SVG
+  // Creates SVG
   var realw = w + colSizeDiff;
   realh = h + 40;
   svg = d3.select("#content")
@@ -363,7 +367,7 @@ function drawContent() {
   	.attr("width", realw)
   	.attr("height", realh);
 
-  // Draw rect
+  // Draws rect
   svg.selectAll("rect")
     .data(objs)
     .enter()
@@ -386,7 +390,7 @@ function drawContent() {
     .attr("fill-opacity", opacity);
 
 
-  // Draw labels
+  // Draws labels
   var fontScale = d3.scale.threshold()
     .domain([10, 30, 60, 100, 200, 300, 400])
     .range([40, 22, 18, 16, 14, 12, 10, 8]);
@@ -414,19 +418,19 @@ function drawContent() {
     .attr("opacity", (showLabel) ? 1 : 0);;
 }
 
-// Stop the simulator
+// Stops the simulator
 function stop() {
   run = false;
   d3.select("#run").text("Run >>");
   d3.select("#step").style({"pointer-events": "all"});
 }
 
-// Draw controls
+// Draws controls
 function drawControl() {
   var d = d3.select("#controlDiv");
-  var e = d.append("div").classed("form-group", true);
+  var e = d.append("div").classed({"form-group": true, "col-md-11": true});
 
-  // Add step button
+  // Adds step button
   e.append("div").classed({ "col-xs-3": true })
     .append("button").attr("id", "step")
     .classed({ "btn": true, "btn-primary": true, "btn-block": true })
@@ -437,7 +441,7 @@ function drawControl() {
       sim("next");
     });
 
-  // Add run button
+  // Adds run button
   e.append("div").classed({ "col-xs-3": true })
     .append("button").attr("id", "run")
     .classed({ "btn": true, "btn-primary": true, "btn-block": true })
@@ -453,7 +457,7 @@ function drawControl() {
       }
     });
 
-  // Add label button
+  // Adds label switch
   var ls = e.append("div").classed({ "col-xs-3": true })
     .append("input")
     .attr("id", "labelSwitch")
@@ -470,16 +474,31 @@ function drawControl() {
     svg.selectAll("text").attr("opacity", (showLabel) ? 1 : 0);
   });
 
+  // Adds time switch
+  var ts = e.append("div").classed({ "col-xs-3": true })
+    .append("input")
+    .attr("id", "timeSwitch")
+    .attr("name", "timeSwitch")
+    .attr("type", "checkbox")
+    .attr("data-label-text", "Time");
+  if (simTime) {
+    ts.attr("checked", "");
+  }
+  $("[name='timeSwitch']").bootstrapSwitch();
+  $('input[name="timeSwitch"]').on('switchChange.bootstrapSwitch', function(event, state) {
+    simTime = state;
+    localStorage.setItem("simTime", simTime);
+  });
 
-  // Add delay control
+  // Adds delay control
   var e = d.append("div").classed({ "form-group": true })
-    .append("div").classed({ "col-xs-9": true });
-  e.append("div").classed({"col-sm-1": true}).style("padding-left", "0px")
+    .append("div").classed({ "col-xs-11": true });
+  e.append("div").classed({"col-xs-1": true}).style("padding-left", "0px")
     .append("label")
     .attr("for", "delay")
     .classed({"control-label": true})
     .text("Delay");
-  e.append("div").classed({"col-sm-11": true})
+  e.append("div").classed({"col-xs-11": true})
     .append("input").attr("id", "delay")
     .attr("type", "range")
     .attr("min", 0).attr("max", 2000)
@@ -496,6 +515,7 @@ function random(max) {
   return Math.floor(Math.random() * max);
 }
 
+// Returns true iff there exists an applicable rule
 function hasRule() {
   for (var i = 0; i < robjs.length; i++) {
     var ls = [ robjs[i].states[0][1], robjs[i].states[1][1] ];
@@ -511,7 +531,7 @@ function hasRule() {
   return false;
 }
 
-// Return { id, r: [t1, t2] } for rule (s1,s2) -> (t1,t2);
+// Returns { id, r: [t1, t2] } for rule (s1,s2) -> (t1,t2);
 // or null if no such rules with (s1,s2)
 function findRule(s1, s2) {
   if (s2 < s1) {
@@ -533,7 +553,7 @@ var sels = null;
 var run = false;
 var stepCount = 0;
 sim = function(mode) {
-  // Check the mode
+  // Checks the mode
   if (mode == "run" && !run)
     return;
 
@@ -542,21 +562,21 @@ sim = function(mode) {
   var rid;  // rule id
   var n;    // next states
 
-  // Check for applicable rules
+  // Checks for applicable rules
   if (!hasRule()) {
     toastr.info("No applicable rules");
     stop();
     return;
   }
 
-  // Randomly pick a pair of states
+  // Randomly picks a pair of states
   do {
     t[0] = random(inits.sum);
     t[1] = random(inits.sum);
   } while (t[0] == t[1]);  // until the states are not identical
 
   var rs = findRule(objs[t[0]].name, objs[t[1]].name);
-  console.log(t[0] + ": " + objs[t[0]].name + ", " + t[1] + ": " + objs[t[1]].name);
+  //console.log(t[0] + ": " + objs[t[0]].name + ", " + t[1] + ": " + objs[t[1]].name);
   if (rs != null) {
     rid = rs.id;
     n = rs.r;
@@ -577,7 +597,7 @@ sim = function(mode) {
       });
   }
 
-  // Hightlight states
+  // Hightlights states
   var sl = svg.selectAll([ "#c"+t[0], "#c"+t[1] ])
     .transition()
     .duration(delay);
@@ -589,14 +609,14 @@ sim = function(mode) {
   sl.attr("stroke-width", "3")
     .attr("stroke-opacity", "0.9")
     .each("end", function(d, i) {
-      // Select the state again
+      // Selects the state again
       var ti = svg.select("#c" + t[i])
         .transition()
         .duration(delay);
 
       // If found a rule
       if (rs != null) {
-        // Update objects
+        // Updates objects
         rems[objs[t[0]].name]--;
         rems[objs[t[1]].name]--;
         objs[t[0]].name = n[0];
@@ -604,7 +624,7 @@ sim = function(mode) {
         rems[objs[t[0]].name]++
         rems[objs[t[1]].name]++;
 
-        // Change label
+        // Changes label
         svg.select("#t" + t[i])
           .transition()
           .duration(delay)
@@ -612,13 +632,13 @@ sim = function(mode) {
             return states[n[i]].label;
           });
 
-        // Fill new color
+        // Fills new color
         ti.attr("fill", function() {
           return colors[states[n[i]].color];
         });
       }
 
-      // Restart if mode is "run"
+      // Restarts if mode is "run"
       ti.each("end", function() {
         svg.select("#c" + t[i]).attr("stroke", "none");
         if (mode == "run" && i%2 == 0)
@@ -627,7 +647,7 @@ sim = function(mode) {
     });
 }
 
-// Draw everything
+// Draws everything
 function draw() {
   d3.select("#initDiv").selectAll("*").remove();
   d3.select("#ruleDiv").selectAll("*").remove();
@@ -640,7 +660,7 @@ function draw() {
   drawControl();
 }
 
-// Toast the error
+// Toasts the error
 function toast(err) {
   if (err.message)
     toastr.error("Syntax error: " + err.message);
@@ -650,10 +670,10 @@ function toast(err) {
     toastr.error(err);
 }
 
-// Load and draw
+// Loads and draws
 function load() {
   try {
-    // Read file
+    // Reads file
     var file = d3.select("#load").property("files")[0];
     if (!file) {
       toastr.error("File not found");
@@ -662,7 +682,7 @@ function load() {
     var reader = new FileReader();
     reader.onload = function(e) {
       try {
-        // Eval the result
+        // Evals the result
         eval(reader.result);
         d3.select("#title").html((title) ? title : "&nbsp;");
         parseRules(rules);
@@ -678,32 +698,32 @@ function load() {
   }
 }
 
-// Add load event
+// Adds load event
 d3.select("#load")
   .on("change", function() {
-    // Display file name
+    // Displays file name
     fileName = d3.select(this).property("value").replace(/^C:\\fakepath\\/, "");
     d3.select("#selFile").text("File: " + fileName);
     d3.select("#ruleH").text("Rules");
     load();
   });
 
-// Add reload event
+// Adds reload event
 d3.select("#reload")
   .on("click", function() {
     load();
   });
 
-// Add draw event
+// Adds draw event
 d3.select("#draw")
   .on("click", function() {
-    // Read numbers of states
+    // Reads numbers of states
     for (s in states) {
       var n = Number(d3.select("#" + s).property("value"));
       states[s].init = n;
     }
 
-    // Draw content SVG
+    // Draws content SVG
     try {
       drawContent();
     } catch (err) {
