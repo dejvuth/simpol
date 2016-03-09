@@ -108,7 +108,7 @@ var svg;
 var rsvg;
 
 var inits;
-var objs;  // array of state names
+var objs;  // array of state names and x,y positions
 var rems;  // maps state names to remaining numbers of states
 
 // Draws init
@@ -531,6 +531,70 @@ function hasRule() {
   return false;
 }
 
+function randomSelect() {
+  // Calculates rule probs
+  var psum = 0;
+  var rprob = [];
+  for (var i = 0; i < robjs.length; i++) {
+    var s1 = robjs[i].states[0][1];
+    var s2 = robjs[i].states[1][1];
+    var p;
+    if (s1 == s2) {
+      p = rems[s1]*(rems[s1]-1)/2;
+    } else {
+      p = rems[s1]*rems[s2];
+    }
+    psum += p;
+    rprob.push(psum);
+  }
+  console.log(rprob);
+
+  // Randomly picks a rule
+  var r = random(psum);
+  var rid = -1;
+  for (var i = 0; i < rprob.length; i++) {
+    if (r < rprob[i]) {
+      rid = i;
+      break;
+    }
+  }
+  console.log(rid);
+
+  // Randomly picks two states
+  var s1 = robjs[rid].states[0][1];
+  var s2 = robjs[rid].states[1][1];
+  var rs1 = random(rems[s1]);
+  var rs2 = random(rems[s2]);
+  while (s1 == s2 && rs1 == rs2) {
+    rs1 = random(rems[s1]);
+    rs2 = random(rems[s2]);
+  }
+  console.log(rs1 + " " + rs2);
+
+  // Finds the object ids of the states
+  var s1count = 0;
+  var s2count = 0;
+  var t1, t2;
+  for (var i = 0; i < objs.length; i++) {
+    if (objs[i].name == s1) {
+      if (t1 == null && s1count == rs1)
+        t1 = i;
+      else
+        s1count++;
+    }
+    if (objs[i].name == s2) {
+      if (t2 == null && s2count == rs2)
+        t2 = i;
+      else
+        s2count++;
+    }
+    if (t1 != null && t2 != null)
+      break;
+  }
+  console.log(t1 + " " + t2);
+  return [t1, t2];
+}
+
 // Returns { id, r: [t1, t2] } for rule (s1,s2) -> (t1,t2);
 // or null if no such rules with (s1,s2)
 function findRule(s1, s2) {
@@ -569,11 +633,15 @@ sim = function(mode) {
     return;
   }
 
-  // Randomly picks a pair of states
-  do {
-    t[0] = random(inits.sum);
-    t[1] = random(inits.sum);
-  } while (t[0] == t[1]);  // until the states are not identical
+  if (simTime) {
+    // Randomly picks a pair of states
+    do {
+      t[0] = random(inits.sum);
+      t[1] = random(inits.sum);
+    } while (t[0] == t[1]);  // until the states are not identical
+  } else {
+    t = randomSelect();
+  }
 
   var rs = findRule(objs[t[0]].name, objs[t[1]].name);
   //console.log(t[0] + ": " + objs[t[0]].name + ", " + t[1] + ": " + objs[t[1]].name);
