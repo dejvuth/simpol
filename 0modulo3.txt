@@ -1,0 +1,48 @@
+title = "0 MODULO 3";
+//opacity = 0.6;
+outputs = {
+  "yes": {
+    "color": "green"
+  },
+  "no": {
+    "color": "red"
+  },
+};
+states = {
+  "M0": {
+    "output": "yes",
+    "label": 0,
+    "init": 0
+  },
+  "M1": {
+    "output": "no",
+    "label": 1,
+    "init": 3
+  },
+  "M2": {
+    "output": "no",
+    "label": 2,
+    "init": 0
+  },
+  "YES": {
+    "output": "yes",
+    "label": "Y",
+    "init": 0
+  },
+  "NO": {
+    "output": "no",
+    "label": "N",
+    "init": 0
+  },
+  };
+rules = [
+  "M0, M1 -> M1, NO",
+  "M0, M2 -> M2, NO",
+  "M1, M1 -> M2, NO",
+  "M1, M2 -> M0, NO",
+  "M2, M2 -> M1, NO",
+  "M0, NO  -> M0, YES",
+  "M1, YES  -> M1, NO",
+  "M2, YES  -> M2, NO",
+];
+

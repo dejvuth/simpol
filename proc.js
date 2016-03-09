@@ -24,8 +24,9 @@ var states;
 var rules;
 
 // Parse raw rules to JSON object
-var inrules;
-var robjs;
+// Rule: s1, s2 -> t1, t2
+var inrules;  // map s1 -> (s2 -> { id, r: [t1, t2] }), where s1 <= s2
+var robjs;    // [ states: [[id,s1], [id,s2], [id,t1], [id,t2]] ]
 function parseRules(rr) {
   for (var s in states) {
     if (!s.match(/^\w+$/)) {
@@ -40,7 +41,7 @@ function parseRules(rr) {
     }
   }
 
-  r = {};
+  inrules = {};
   robjs = [];
   for (var i = 0; i < rr.length; i++) {
     var lr = rr[i].match(/\w+/g);
@@ -57,20 +58,26 @@ function parseRules(rr) {
       }
     }
 
-    // Create dictionary
-    if (r[lr[0]] == null)
-      r[lr[0]] = {};
-    r[lr[0]][lr[1]] = {
+    // FIXME Global inrules
+    var s1 = lr[0];
+    var s2 = lr[1];
+    if (s2 < s1) {
+      var tmp = s1;
+      s1 = s2;
+      s2 = tmp;
+    }
+    if (inrules[s1] == null)
+      inrules[s1] = {};
+    inrules[s1][s2] = {
       "id": i,
       "r": [lr[2], lr[3]]
     };
 
-    // FIXME Modify global var
+    // FIXME Global robjs
     robjs.push({
       "states": [[i, lr[0]], [i, lr[1]], [i, lr[2]], [i, lr[3]]]
     });
   }
-  return r;
 }
 
 // GLOBAL CONFIGS
@@ -96,7 +103,8 @@ var svg;
 var rsvg;
 
 var inits;
-var objs;
+var objs;  // array of state names
+var rems;  // map state names to remaining numbers of states
 
 // Draw init
 function drawInit() {
@@ -231,7 +239,6 @@ function drawRule() {
     .attr("x2", rw/2 + ruler - rpadding)
     .attr("y2", function(d, i) {
       return (ruler+rpadding) + 2*(ruler+rpadding)*i;
-      //return 2*(ruler+rpadding)*(i+1);
     })
     .attr("stroke", "black")
     .attr("stroke-width", "2")
@@ -326,8 +333,8 @@ function drawContent() {
   var offset = 0;
   var dy = h/row;
   for (var i = 0; i < inits.s.length; i++) {
+    //rems[inits.s[i].name] = inits.s[i].num;
     var maxPerRow = Math.max(Math.floor(inits.s[i].col/(2*(r+padding))), 1);
-    //var dx = inits.s[i].col/maxPerRow;
     for (var j = 0; j < inits.s[i].num; j++) {
       objs.push({
         "name": inits.s[i].name,
@@ -335,8 +342,17 @@ function drawContent() {
         "cy": Math.floor(j/maxPerRow)*dy + dy/2
       });
     }
-    //offset += inits.s[i].col;
     offset += maxPerRow*2*(r+padding);
+  }
+
+  // Prepare rems
+  rems = {};
+  for (var s in states) {
+    var i = states[s].init;
+    if (i == null || i <= 0)
+      rems[s] = 0;
+    else
+      rems[s] = i;
   }
 
   // Create SVG
@@ -439,12 +455,6 @@ function drawControl() {
 
   // Add label button
   var ls = e.append("div").classed({ "col-xs-3": true })
-    //.append("button").attr("id", "removeLabel")
-    //.classed({ "btn": true, "btn-primary": true, "btn-block": true })
-    //.attr("data-toggle", "button")
-    //.text("Labels")
-    //.on("click", function() {
-    //});
     .append("input")
     .attr("id", "labelSwitch")
     .attr("name", "labelSwitch")
@@ -468,7 +478,6 @@ function drawControl() {
     .append("label")
     .attr("for", "delay")
     .classed({"control-label": true})
-    //.style("margin-bottom", "0px")
     .text("Delay");
   e.append("div").classed({"col-sm-11": true})
     .append("input").attr("id", "delay")
@@ -487,12 +496,44 @@ function random(max) {
   return Math.floor(Math.random() * max);
 }
 
+function hasRule() {
+  for (var i = 0; i < robjs.length; i++) {
+    var ls = [ robjs[i].states[0][1], robjs[i].states[1][1] ];
+    if (ls[0] == ls[1]) {
+      if (rems[ls[0]] >= 2)
+        return true;
+    } else {
+      if (rems[ls[0]] >= 1 && rems[ls[1]] >= 1) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+// Return { id, r: [t1, t2] } for rule (s1,s2) -> (t1,t2);
+// or null if no such rules with (s1,s2)
+function findRule(s1, s2) {
+  if (s2 < s1) {
+    var tmp = s1;
+    s1 = s2;
+    s2 = tmp;
+  }
+
+  if (inrules.hasOwnProperty(s1)) {
+    if (inrules[s1].hasOwnProperty(s2))
+      return inrules[s1][s2];
+  }
+
+  return null;
+}
+
 // Simulator function
 var sels = null;
 var run = false;
 var stepCount = 0;
 sim = function(mode) {
-
+  // Check the mode
   if (mode == "run" && !run)
     return;
 
@@ -500,93 +541,44 @@ sim = function(mode) {
   var t = [-1, -1];  // current states
   var rid;  // rule id
   var n;    // next states
-  while (n == null) {
-    pick++;
 
-    if (pick <= maxPick) {
-      // Randomly pick two states
-      t[0] = random(inits.sum);
-      t[1] = random(inits.sum);
-    } else {
-      // Manually find two states
-      var found = false;
-
-      // Find the first remaining state for each type
-      var remains = {};
-      for (var i = 0; i < objs.length; i++) {
-        if (!remains.hasOwnProperty(objs[i].name)) {
-          remains[objs[i].name] = [i];
-        } else {
-          remains[objs[i].name].push(i);
-        }
-      }
-
-      // Loop for each pair of remains
-      loop1:
-      for (var l1 in remains) {
-        if (!inrules.hasOwnProperty(l1))
-          continue;
-        for (var l2 in remains) {
-          if (!inrules[l1].hasOwnProperty(l2))
-            continue;
-          found = true;
-          if (l1 == l2) {
-            t[0] = remains[l1][0];
-            t[1] = remains[l1][1];
-          } else {
-            t[0] = remains[l1][0];
-            t[1] = remains[l2][0];
-          }
-          break loop1;
-        }
-      }
-
-      // No states and rules found
-      if (!found) {
-        toastr.info("No applicable rules");
-        stop();
-        return;
-      }
-    }
-    var m = inrules[objs[t[0]].name];
-    if (m == null) {
-      m = inrules[objs[t[1]].name];
-      if (m == null)
-        continue;
-      var o = m[objs[t[0]].name];
-      if (o == null)
-        continue;
-      rid = o.id;
-      n = o.r;
-    } else {
-      var o = m[objs[t[1]].name];
-      if (o == null)
-        continue;
-      rid = o.id;
-      n = o.r;
-    }
+  // Check for applicable rules
+  if (!hasRule()) {
+    toastr.info("No applicable rules");
+    stop();
+    return;
   }
 
-  // Highlight rule
-  rsvg.selectAll(".rule" + rid)
-    .attr("stroke", function() {
-      return colors["brown"];
-    })
-    .attr("stroke-width", "3")
-    .attr("stroke-opacity", "0.9")
-    .transition()
-    .duration(2*delay)
-    .each("end", function() {
-      rsvg.selectAll(".rule" + rid)
-        .attr("stroke", "none");
-    });
+  // Randomly pick a pair of states
+  do {
+    t[0] = random(inits.sum);
+    t[1] = random(inits.sum);
+  } while (t[0] == t[1]);  // until the states are not identical
 
-  objs[t[0]].name = n[0];
-  objs[t[1]].name = n[1];
+  var rs = findRule(objs[t[0]].name, objs[t[1]].name);
+  console.log(t[0] + ": " + objs[t[0]].name + ", " + t[1] + ": " + objs[t[1]].name);
+  if (rs != null) {
+    rid = rs.id;
+    n = rs.r;
+    console.log("Rule " + n);
 
-  sels = [ "#c"+t[0], "#c"+t[1] ];
+    // Highlight rule
+    rsvg.selectAll(".rule" + rid)
+      .attr("stroke", function() {
+        return colors["brown"];
+      })
+      .attr("stroke-width", "3")
+      .attr("stroke-opacity", "0.9")
+      .transition()
+      .duration(2*delay)
+      .each("end", function() {
+        rsvg.selectAll(".rule" + rid)
+          .attr("stroke", "none");
+      });
+  }
 
-  var sl = svg.selectAll(sels)
+  // Hightlight states
+  var sl = svg.selectAll([ "#c"+t[0], "#c"+t[1] ])
     .transition()
     .duration(delay);
   if (highlightState) {
@@ -597,35 +589,41 @@ sim = function(mode) {
   sl.attr("stroke-width", "3")
     .attr("stroke-opacity", "0.9")
     .each("end", function(d, i) {
-
-      // Change label
-      svg.select("#t" + t[i])
+      // Select the state again
+      var ti = svg.select("#c" + t[i])
         .transition()
-        .duration(delay)
-        .text(function() {
-          return states[n[i]].label;
-        });
+        .duration(delay);
 
-      // Fill new color
-      var x = svg.select("#c" + t[i])
-        .transition()
-        .duration(delay)
-        .attr("fill", function() {
+      // If found a rule
+      if (rs != null) {
+        // Update objects
+        rems[objs[t[0]].name]--;
+        rems[objs[t[1]].name]--;
+        objs[t[0]].name = n[0];
+        objs[t[1]].name = n[1];
+        rems[objs[t[0]].name]++
+        rems[objs[t[1]].name]++;
+
+        // Change label
+        svg.select("#t" + t[i])
+          .transition()
+          .duration(delay)
+          .text(function() {
+            return states[n[i]].label;
+          });
+
+        // Fill new color
+        ti.attr("fill", function() {
           return colors[states[n[i]].color];
         });
+      }
 
       // Restart if mode is "run"
-      if (mode == "run") {
-        x.each("end", function() {
-          svg.select("#c" + t[i]).attr("stroke", "none");
-          if (i%2 == 0)
-            sim("run");
-        });
-      } else {
-        x.each("end", function() {
-          svg.select("#c" + t[i]).attr("stroke", "none");
-        });
-      }
+      ti.each("end", function() {
+        svg.select("#c" + t[i]).attr("stroke", "none");
+        if (mode == "run" && i%2 == 0)
+          sim("run");
+      });
     });
 }
 
@@ -667,7 +665,7 @@ function load() {
         // Eval the result
         eval(reader.result);
         d3.select("#title").html((title) ? title : "&nbsp;");
-        inrules = parseRules(rules);
+        parseRules(rules);
         draw();
       } catch (err) {
         toast(err);
@@ -705,6 +703,7 @@ d3.select("#draw")
       states[s].init = n;
     }
 
+    // Draw content SVG
     try {
       drawContent();
     } catch (err) {
