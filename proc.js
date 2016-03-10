@@ -23,23 +23,29 @@ var outputs;
 var states;
 var rules;
 
+var stateNames;  // in ascending order
+
 // Parses raw rules to JSON object
 // Rule: s1, s2 -> t1, t2
 var inrules;  // map s1 -> (s2 -> { id, r: [t1, t2] }), where s1 <= s2
 var robjs;    // [ states: [[id,s1], [id,s2], [id,t1], [id,t2]] ]
 function parseRules(rr) {
+  stateNames = [];
   for (var s in states) {
     if (!s.match(/^\w+$/)) {
       throw "State name " + s + " is not alphanumeric";
     }
 
+    stateNames.push(s);
+
+    // Use the output property to update the state's color
     if (states[s].hasOwnProperty("output")) {
       if (!outputs.hasOwnProperty(states[s].output))
         throw "Output " + states[s].output + " not found";
-
       states[s].color = outputs[states[s].output].color;
     }
   }
+  stateNames.sort();
 
   inrules = {};
   robjs = [];
@@ -333,6 +339,12 @@ function drawContent() {
     }
   }
 
+  // Prepares rems
+  rems = {};
+  for (var s in states) {
+    rems[s] = [];
+  }
+
   // Prepares DOM objects
   objs = [];
   var offset = 0;
@@ -340,23 +352,14 @@ function drawContent() {
   for (var i = 0; i < inits.s.length; i++) {
     var maxPerRow = Math.max(Math.floor(inits.s[i].col/(2*(r+padding))), 1);
     for (var j = 0; j < inits.s[i].num; j++) {
-      objs.push({
+      var len = objs.push({
         "name": inits.s[i].name,
         "cx": offset + (j%maxPerRow)*2*(r+padding) + (r+padding),
         "cy": Math.floor(j/maxPerRow)*dy + dy/2
       });
+      rems[inits.s[i].name].push(len-1);
     }
     offset += maxPerRow*2*(r+padding);
-  }
-
-  // Prepares rems
-  rems = {};
-  for (var s in states) {
-    var i = states[s].init;
-    if (i == null || i <= 0)
-      rems[s] = 0;
-    else
-      rems[s] = i;
   }
 
   // Creates SVG
@@ -520,10 +523,10 @@ function hasRule() {
   for (var i = 0; i < robjs.length; i++) {
     var ls = [ robjs[i].states[0][1], robjs[i].states[1][1] ];
     if (ls[0] == ls[1]) {
-      if (rems[ls[0]] >= 2)
+      if (rems[ls[0]].length >= 2)
         return true;
     } else {
-      if (rems[ls[0]] >= 1 && rems[ls[1]] >= 1) {
+      if (rems[ls[0]].length >= 1 && rems[ls[1]].length >= 1) {
         return true;
       }
     }
@@ -540,14 +543,14 @@ function randomSelect() {
     var s2 = robjs[i].states[1][1];
     var p;
     if (s1 == s2) {
-      p = rems[s1]*(rems[s1]-1)/2;
+      p = rems[s1].length*(rems[s1].length-1)/2;
     } else {
-      p = rems[s1]*rems[s2];
+      p = rems[s1].length*rems[s2].length;
     }
     psum += p;
     rprob.push(psum);
   }
-  console.log(rprob);
+  //console.log(rprob);
 
   // Randomly picks a rule
   var r = random(psum);
@@ -558,41 +561,22 @@ function randomSelect() {
       break;
     }
   }
-  console.log(rid);
+  //console.log(rid);
 
   // Randomly picks two states
   var s1 = robjs[rid].states[0][1];
   var s2 = robjs[rid].states[1][1];
-  var rs1 = random(rems[s1]);
-  var rs2 = random(rems[s2]);
+  var rs1 = random(rems[s1].length);
+  var rs2 = random(rems[s2].length);
   while (s1 == s2 && rs1 == rs2) {
-    rs1 = random(rems[s1]);
-    rs2 = random(rems[s2]);
+    rs1 = random(rems[s1].length);
+    rs2 = random(rems[s2].length);
   }
-  console.log(rs1 + " " + rs2);
+  //console.log(rs1 + " " + rs2);
 
-  // Finds the object ids of the states
-  var s1count = 0;
-  var s2count = 0;
-  var t1, t2;
-  for (var i = 0; i < objs.length; i++) {
-    if (objs[i].name == s1) {
-      if (t1 == null && s1count == rs1)
-        t1 = i;
-      else
-        s1count++;
-    }
-    if (objs[i].name == s2) {
-      if (t2 == null && s2count == rs2)
-        t2 = i;
-      else
-        s2count++;
-    }
-    if (t1 != null && t2 != null)
-      break;
-  }
-  console.log(t1 + " " + t2);
-  return [t1, t2];
+  return { "id": rid,
+    "sel": [ { "name": s1, "remIndex": rs1 }, { "name": s2, "remIndex": rs2 } ],
+    "next": [ robjs[rid].states[2][1], robjs[rid].states[3][1] ]};
 }
 
 // Returns { id, r: [t1, t2] } for rule (s1,s2) -> (t1,t2);
@@ -623,8 +607,8 @@ sim = function(mode) {
 
   var pick = 0;
   var t = [-1, -1];  // current states
-  var rid;  // rule id
-  var n;    // next states
+  var rid = -1;  // rule id
+  var next;    // next states
 
   // Checks for applicable rules
   if (!hasRule()) {
@@ -633,22 +617,68 @@ sim = function(mode) {
     return;
   }
 
+  var sel;  // [ {name, remIndex}, {name, remIndex} ]
   if (simTime) {
     // Randomly picks a pair of states
+    var rands = [-1, -1]
     do {
-      t[0] = random(inits.sum);
-      t[1] = random(inits.sum);
-    } while (t[0] == t[1]);  // until the states are not identical
-  } else {
-    t = randomSelect();
-  }
+      rands[0] = random(inits.sum);
+      rands[1] = random(inits.sum);
+    } while (rands[0] == rands[1]);  // until the states are not identical
+    console.log("rands: " + rands);
 
-  var rs = findRule(objs[t[0]].name, objs[t[1]].name);
-  //console.log(t[0] + ": " + objs[t[0]].name + ", " + t[1] + ": " + objs[t[1]].name);
-  if (rs != null) {
+    // Finds out the indices of the states in rems
+    sel = [{}, {}];
+    var rsum = 0;
+    for (var i = 0; i < stateNames.length; i++) {
+      var l = rems[stateNames[i]].length;
+      console.log(stateNames[i] + " " + l);
+      if (rsum <= rands[0] && rands[0] < rsum + l) {
+        sel[0]["name"] = stateNames[i];
+        sel[0]["remIndex"] = rands[0] - rsum;
+      } if (rsum <= rands[1] && rands[1] < rsum + l) {
+        sel[1]["name"] = stateNames[i];
+        sel[1]["remIndex"] = rands[1] - rsum;
+      }
+      rsum += l;
+    }
+
+    t[0] = rems[sel[0].name][sel[0].remIndex];
+    t[1] = rems[sel[1].name][sel[1].remIndex];
+    console.log("t: " + t + " - " + objs[t[0]].name + ", " + objs[t[1]].name);
+
+    // Find rule from the pair
+    var rs = findRule(sel[0].name, sel[1].name);
+
+    if (rs != null) {
+      rid = rs.id;
+      next = rs.r;
+    }
+  } else {
+    var rs = randomSelect();
+    sel = rs.sel;
+    t[0] = rems[sel[0]["name"]][sel[0]["remIndex"]];
+    t[1] = rems[sel[1]["name"]][sel[1]["remIndex"]];
+
     rid = rs.id;
-    n = rs.r;
-    console.log("Rule " + n);
+    next = rs.next;
+  }
+  console.log("rid: " + rid);
+
+  if (rid != -1) {
+    console.log(sel[0]);
+    console.log(sel[1]);
+    console.log(next);
+
+    // Updates rems and objs
+    rems[sel[0].name].splice(sel[0].remIndex, 1);
+    rems[sel[1].name].splice(sel[1].remIndex, 1);
+    objs[t[0]].name = next[0];
+    objs[t[1]].name = next[1];
+    rems[next[0]].push(t[0]);
+    rems[next[1]].push(t[1]);
+    console.log(rems);
+    console.log(objs);
 
     // Highlight rule
     rsvg.selectAll(".rule" + rid)
@@ -683,26 +713,19 @@ sim = function(mode) {
         .duration(delay);
 
       // If found a rule
-      if (rs != null) {
-        // Updates objects
-        rems[objs[t[0]].name]--;
-        rems[objs[t[1]].name]--;
-        objs[t[0]].name = n[0];
-        objs[t[1]].name = n[1];
-        rems[objs[t[0]].name]++
-        rems[objs[t[1]].name]++;
+      if (rid != -1) {
 
         // Changes label
         svg.select("#t" + t[i])
           .transition()
           .duration(delay)
           .text(function() {
-            return states[n[i]].label;
+            return states[next[i]].label;
           });
 
         // Fills new color
         ti.attr("fill", function() {
-          return colors[states[n[i]].color];
+          return colors[states[next[i]].color];
         });
       }
 
