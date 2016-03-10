@@ -18,12 +18,15 @@ var colors = {
   "darkpurple": "#966FD6",
 };
 
+
 var title;
 var outputs;
 var states;
 var rules;
 
 var stateNames;  // in ascending order
+
+console.log = function() {}
 
 // Parses raw rules to JSON object
 // Rule: s1, s2 -> t1, t2
@@ -108,7 +111,8 @@ var simTime = true;
 if (localStorage.hasOwnProperty("simTime")) {
   simTime = localStorage.getItem("simTime") === "true";
 }
-
+var selColor = "#4E443C";
+var selRedColor = "#EB4B2B";
 
 var svg;
 var rsvg;
@@ -572,7 +576,7 @@ function randomSelect() {
     rs1 = random(rems[s1].length);
     rs2 = random(rems[s2].length);
   }
-  //console.log(rs1 + " " + rs2);
+  console.log(rs1 + " " + rs2);
 
   return { "id": rid,
     "sel": [ { "name": s1, "remIndex": rs1 }, { "name": s2, "remIndex": rs2 } ],
@@ -597,7 +601,6 @@ function findRule(s1, s2) {
 }
 
 // Simulator function
-var sels = null;
 var run = false;
 var stepCount = 0;
 sim = function(mode) {
@@ -645,7 +648,6 @@ sim = function(mode) {
 
     t[0] = rems[sel[0].name][sel[0].remIndex];
     t[1] = rems[sel[1].name][sel[1].remIndex];
-    console.log("t: " + t + " - " + objs[t[0]].name + ", " + objs[t[1]].name);
 
     // Find rule from the pair
     var rs = findRule(sel[0].name, sel[1].name);
@@ -663,6 +665,7 @@ sim = function(mode) {
     rid = rs.id;
     next = rs.next;
   }
+  console.log("t: " + t + " - " + objs[t[0]].name + ", " + objs[t[1]].name);
   console.log("rid: " + rid);
 
   if (rid != -1) {
@@ -672,7 +675,10 @@ sim = function(mode) {
 
     // Updates rems and objs
     rems[sel[0].name].splice(sel[0].remIndex, 1);
-    rems[sel[1].name].splice(sel[1].remIndex, 1);
+    if (sel[0].name == sel[1].name && sel[0].remIndex < sel[1].remIndex)
+      rems[sel[1].name].splice(sel[1].remIndex - 1, 1);
+    else
+      rems[sel[1].name].splice(sel[1].remIndex, 1);
     objs[t[0]].name = next[0];
     objs[t[1]].name = next[1];
     rems[next[0]].push(t[0]);
@@ -682,9 +688,7 @@ sim = function(mode) {
 
     // Highlight rule
     rsvg.selectAll(".rule" + rid)
-      .attr("stroke", function() {
-        return colors["brown"];
-      })
+      .attr("stroke", selColor)
       .attr("stroke-width", "3")
       .attr("stroke-opacity", "0.9")
       .transition()
@@ -697,11 +701,12 @@ sim = function(mode) {
 
   // Hightlights states
   var sl = svg.selectAll([ "#c"+t[0], "#c"+t[1] ])
+    .attr("stroke-opacity", "0")
     .transition()
     .duration(delay);
   if (highlightState) {
     sl.attr("stroke", function() {
-      return colors["brown"];
+      return (rid != -1) ? selColor : selRedColor;
     });
   }
   sl.attr("stroke-width", "3")
