@@ -30,7 +30,7 @@ console.log = function() {}
 
 // Parses raw rules to JSON object
 // Rule: s1, s2 -> t1, t2
-var inrules;  // map s1 -> (s2 -> { id, r: [t1, t2] }), where s1 <= s2
+var inrules;  // map s1 -> (s2 -> { id, r: [t1, t2] })
 var robjs;    // [ states: [[id,s1], [id,s2], [id,t1], [id,t2]] ]
 function parseRules(rr) {
   stateNames = [];
@@ -68,16 +68,9 @@ function parseRules(rr) {
     }
 
     // FIXME Global inrules
-    var s1 = lr[0];
-    var s2 = lr[1];
-    if (s2 < s1) {
-      var tmp = s1;
-      s1 = s2;
-      s2 = tmp;
-    }
-    if (inrules[s1] == null)
-      inrules[s1] = {};
-    inrules[s1][s2] = {
+    if (inrules[lr[0]] == null)
+      inrules[lr[0]] = {};
+    inrules[lr[0]][lr[1]] = {
       "id": i,
       "r": [lr[2], lr[3]]
     };
@@ -554,7 +547,7 @@ function randomSelect() {
     psum += p;
     rprob.push(psum);
   }
-  //console.log(rprob);
+  console.log("rprob: " + rprob);
 
   // Randomly picks a rule
   var r = random(psum);
@@ -586,10 +579,9 @@ function randomSelect() {
 // Returns { id, r: [t1, t2] } for rule (s1,s2) -> (t1,t2);
 // or null if no such rules with (s1,s2)
 function findRule(s1, s2) {
-  if (s2 < s1) {
-    var tmp = s1;
-    s1 = s2;
-    s2 = tmp;
+  if (inrules.hasOwnProperty(s2)) {
+    if (inrules[s2].hasOwnProperty(s1))
+      return inrules[s2][s1];
   }
 
   if (inrules.hasOwnProperty(s1)) {
@@ -621,6 +613,8 @@ sim = function(mode) {
   }
 
   var sel;  // [ {name, remIndex}, {name, remIndex} ]
+
+  // Time ON
   if (simTime) {
     // Randomly picks a pair of states
     var rands = [-1, -1]
@@ -649,14 +643,16 @@ sim = function(mode) {
     t[0] = rems[sel[0].name][sel[0].remIndex];
     t[1] = rems[sel[1].name][sel[1].remIndex];
 
-    // Find rule from the pair
+    // Finds rule from the pair
     var rs = findRule(sel[0].name, sel[1].name);
 
     if (rs != null) {
       rid = rs.id;
       next = rs.r;
     }
-  } else {
+  }
+  // Time OFF
+  else {
     var rs = randomSelect();
     sel = rs.sel;
     t[0] = rems[sel[0]["name"]][sel[0]["remIndex"]];
