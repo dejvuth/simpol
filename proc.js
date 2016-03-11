@@ -558,7 +558,6 @@ function randomSelect() {
       break;
     }
   }
-  //console.log(rid);
 
   // Randomly picks two states
   var s1 = robjs[rid].states[0][1];
@@ -622,14 +621,12 @@ sim = function(mode) {
       rands[0] = random(inits.sum);
       rands[1] = random(inits.sum);
     } while (rands[0] == rands[1]);  // until the states are not identical
-    //console.log("rands: " + rands);
 
     // Finds out the indices of the states in rems
     sel = [{}, {}];
     var rsum = 0;
     for (var i = 0; i < stateNames.length; i++) {
       var l = rems[stateNames[i]].length;
-      //console.log(stateNames[i] + " " + l);
       if (rsum <= rands[0] && rands[0] < rsum + l) {
         sel[0]["name"] = stateNames[i];
         sel[0]["remIndex"] = rands[0] - rsum;
@@ -640,7 +637,6 @@ sim = function(mode) {
       rsum += l;
     }
 
-
     // Finds rule from the pair
     var rs = null;
     if (inrules.hasOwnProperty(sel[0].name)) {
@@ -648,11 +644,10 @@ sim = function(mode) {
         rs = inrules[sel[0].name][sel[1].name];
     } else if (inrules.hasOwnProperty(sel[1].name)) {
       if (inrules[sel[1].name].hasOwnProperty(sel[0].name)) {
-        //console.log(sel[0].name + " " + sel[0].remIndex + " " + sel[1].name + " " + sel[1].remIndex);
+        // Swaps the selected pair to correct ordering
         var tmp = sel[0];
         sel[0] = sel[1];
         sel[1] = tmp;
-        //console.log(sel[0].name + " " + sel[0].remIndex + " " + sel[1].name + " " + sel[1].remIndex);
         rs = inrules[sel[0].name][sel[1].name];
       }
     }
@@ -663,11 +658,6 @@ sim = function(mode) {
     if (rs != null) {
       rid = rs.id;
       next = rs.r;
-
-      //if (states[next[0]].label == "Y" && states[next[0]].color == "red")
-        //return;
-      //if (states[next[1]].label == "Y" && states[next[1]].color == "red")
-        //return;
     }
   }
   // Time OFF
@@ -696,7 +686,7 @@ sim = function(mode) {
     rems[next[0]].push(t[0]);
     rems[next[1]].push(t[1]);
 
-    // Highlight rule
+    // Highlights rule
     rsvg.selectAll(".rule" + rid)
       .attr("stroke", selColor)
       .attr("stroke-width", "3")
@@ -717,37 +707,24 @@ sim = function(mode) {
       return (rid != -1) ? selColor : selRedColor;
     });
   }
-    //.attr("stroke-opacity", "0")
-    //.attr("stroke-width", "0")
   sl.transition()
     .duration(delay)
     .attr("stroke-width", "3")
     .attr("stroke-opacity", "0.9")
-    .each("end", function(d, i) {
-      // Selects the state again
-      //var ti = svg.select("#c" + t[i])
-        //.transition()
-        //.duration(delay);
-
+    .each("end", function(d, i) {  // End of selection highlights
       // If found a rule
       if (rid != -1) {
         // Fills new color
-        //ti.attr("fill", function() {
-          //return colors[states[next[i]].color];
-        //});
-
-        //var ti = d3.select(this)
         svg.select("#c" + t[i])
           .transition()
           .duration(delay)
           .attr("fill", colors[states[next[i]].color])
           .attr("stroke-width", "0")
           .each("end", function() {
+            // Runs again
             if (mode == "run" && i%2 == 1)
               sim("run");
           });
-
-        //console.log(t[i] + " " + states[next[i]].color);
 
         // Changes label
         svg.select("#t" + t[i])
@@ -757,30 +734,17 @@ sim = function(mode) {
             return states[next[i]].label;
           });
       } else {
+        // No rules: only removes the highlights
         svg.select("#c" + t[i])
-        //d3.select(this)
           .transition()
           .duration(delay)
           .attr("stroke-width", "0")
           .each("end", function() {
+            // Runs again
             if (mode == "run" && i%2 == 1)
               sim("run");
           });
       }
-
-      // Restarts if mode is "run"
-      //ti.transition()
-        //.duration(delay)
-        //.each("end", function() {
-
-        //svg.select("#c" + t[i])
-        //d3.select(this)
-        //.attr("stroke", "none")
-        //.attr("stroke-opacity", "0");
-        //.attr("stroke-width", "0")
-        //if (mode == "run" && i%2 == 0)
-          //sim("run");
-      //});
     });
 }
 
