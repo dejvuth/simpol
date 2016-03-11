@@ -26,7 +26,7 @@ var rules;
 
 var stateNames;  // in ascending order
 
-console.log = function() {}
+//console.log = function() {}
 
 // Parses raw rules to JSON object
 // Rule: s1, s2 -> t1, t2
@@ -547,7 +547,7 @@ function randomSelect() {
     psum += p;
     rprob.push(psum);
   }
-  console.log("rprob: " + rprob);
+  //console.log("rprob: " + rprob);
 
   // Randomly picks a rule
   var r = random(psum);
@@ -569,7 +569,7 @@ function randomSelect() {
     rs1 = random(rems[s1].length);
     rs2 = random(rems[s2].length);
   }
-  console.log(rs1 + " " + rs2);
+  //console.log(rs1 + " " + rs2);
 
   return { "id": rid,
     "sel": [ { "name": s1, "remIndex": rs1 }, { "name": s2, "remIndex": rs2 } ],
@@ -603,7 +603,7 @@ sim = function(mode) {
   var pick = 0;
   var t = [-1, -1];  // current states
   var rid = -1;  // rule id
-  var next;    // next states
+  var next = null;    // next states
 
   // Checks for applicable rules
   if (!hasRule()) {
@@ -622,14 +622,14 @@ sim = function(mode) {
       rands[0] = random(inits.sum);
       rands[1] = random(inits.sum);
     } while (rands[0] == rands[1]);  // until the states are not identical
-    console.log("rands: " + rands);
+    //console.log("rands: " + rands);
 
     // Finds out the indices of the states in rems
     sel = [{}, {}];
     var rsum = 0;
     for (var i = 0; i < stateNames.length; i++) {
       var l = rems[stateNames[i]].length;
-      console.log(stateNames[i] + " " + l);
+      //console.log(stateNames[i] + " " + l);
       if (rsum <= rands[0] && rands[0] < rsum + l) {
         sel[0]["name"] = stateNames[i];
         sel[0]["remIndex"] = rands[0] - rsum;
@@ -640,15 +640,34 @@ sim = function(mode) {
       rsum += l;
     }
 
-    t[0] = rems[sel[0].name][sel[0].remIndex];
-    t[1] = rems[sel[1].name][sel[1].remIndex];
 
     // Finds rule from the pair
-    var rs = findRule(sel[0].name, sel[1].name);
+    var rs = null;
+    if (inrules.hasOwnProperty(sel[0].name)) {
+      if (inrules[sel[0].name].hasOwnProperty(sel[1].name))
+        rs = inrules[sel[0].name][sel[1].name];
+    } else if (inrules.hasOwnProperty(sel[1].name)) {
+      if (inrules[sel[1].name].hasOwnProperty(sel[0].name)) {
+        //console.log(sel[0].name + " " + sel[0].remIndex + " " + sel[1].name + " " + sel[1].remIndex);
+        var tmp = sel[0];
+        sel[0] = sel[1];
+        sel[1] = tmp;
+        //console.log(sel[0].name + " " + sel[0].remIndex + " " + sel[1].name + " " + sel[1].remIndex);
+        rs = inrules[sel[0].name][sel[1].name];
+      }
+    }
+
+    t[0] = rems[sel[0].name][sel[0].remIndex];
+    t[1] = rems[sel[1].name][sel[1].remIndex];
 
     if (rs != null) {
       rid = rs.id;
       next = rs.r;
+
+      //if (states[next[0]].label == "Y" && states[next[0]].color == "red")
+        //return;
+      //if (states[next[1]].label == "Y" && states[next[1]].color == "red")
+        //return;
     }
   }
   // Time OFF
@@ -661,13 +680,10 @@ sim = function(mode) {
     rid = rs.id;
     next = rs.next;
   }
-  console.log("t: " + t + " - " + objs[t[0]].name + ", " + objs[t[1]].name);
-  console.log("rid: " + rid);
 
   if (rid != -1) {
-    console.log(sel[0]);
-    console.log(sel[1]);
-    console.log(next);
+    //console.log(t[0] + "," + t[1] + " - " + rid
+                //+ " " + objs[t[0]].name + "," + objs[t[1]].name + " -> " + next);
 
     // Updates rems and objs
     rems[sel[0].name].splice(sel[0].remIndex, 1);
@@ -679,8 +695,6 @@ sim = function(mode) {
     objs[t[1]].name = next[1];
     rems[next[0]].push(t[0]);
     rems[next[1]].push(t[1]);
-    console.log(rems);
-    console.log(objs);
 
     // Highlight rule
     rsvg.selectAll(".rule" + rid)
@@ -695,26 +709,45 @@ sim = function(mode) {
       });
   }
 
-  // Hightlights states
-  var sl = svg.selectAll([ "#c"+t[0], "#c"+t[1] ])
-    .attr("stroke-opacity", "0")
-    .transition()
-    .duration(delay);
+  // Highlights states
+  var sl = svg.selectAll([ "#c"+t[0], "#c"+t[1] ]);
   if (highlightState) {
-    sl.attr("stroke", function() {
+    sl.attr("stroke-width", "0")
+      .attr("stroke", function() {
       return (rid != -1) ? selColor : selRedColor;
     });
   }
-  sl.attr("stroke-width", "3")
+    //.attr("stroke-opacity", "0")
+    //.attr("stroke-width", "0")
+  sl.transition()
+    .duration(delay)
+    .attr("stroke-width", "3")
     .attr("stroke-opacity", "0.9")
     .each("end", function(d, i) {
       // Selects the state again
-      var ti = svg.select("#c" + t[i])
-        .transition()
-        .duration(delay);
+      //var ti = svg.select("#c" + t[i])
+        //.transition()
+        //.duration(delay);
 
       // If found a rule
       if (rid != -1) {
+        // Fills new color
+        //ti.attr("fill", function() {
+          //return colors[states[next[i]].color];
+        //});
+
+        //var ti = d3.select(this)
+        svg.select("#c" + t[i])
+          .transition()
+          .duration(delay)
+          .attr("fill", colors[states[next[i]].color])
+          .attr("stroke-width", "0")
+          .each("end", function() {
+            if (mode == "run" && i%2 == 1)
+              sim("run");
+          });
+
+        //console.log(t[i] + " " + states[next[i]].color);
 
         // Changes label
         svg.select("#t" + t[i])
@@ -723,19 +756,31 @@ sim = function(mode) {
           .text(function() {
             return states[next[i]].label;
           });
-
-        // Fills new color
-        ti.attr("fill", function() {
-          return colors[states[next[i]].color];
-        });
+      } else {
+        svg.select("#c" + t[i])
+        //d3.select(this)
+          .transition()
+          .duration(delay)
+          .attr("stroke-width", "0")
+          .each("end", function() {
+            if (mode == "run" && i%2 == 1)
+              sim("run");
+          });
       }
 
       // Restarts if mode is "run"
-      ti.each("end", function() {
-        svg.select("#c" + t[i]).attr("stroke", "none");
-        if (mode == "run" && i%2 == 0)
-          sim("run");
-      });
+      //ti.transition()
+        //.duration(delay)
+        //.each("end", function() {
+
+        //svg.select("#c" + t[i])
+        //d3.select(this)
+        //.attr("stroke", "none")
+        //.attr("stroke-opacity", "0");
+        //.attr("stroke-width", "0")
+        //if (mode == "run" && i%2 == 0)
+          //sim("run");
+      //});
     });
 }
 
