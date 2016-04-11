@@ -439,6 +439,7 @@ function changeMode(m) {
     .text(SEL_MODES[m] + " ")
     .append("span")
     .classed({ "caret": true });
+  localStorage.setItem("selMode", selMode);
 }
 
 // Draws controls
@@ -515,7 +516,7 @@ function drawControl() {
     .attr("type", "button")
     .attr("data-toggle", "dropdown");
   if (selMode)
-    bt.text(SEL_MODES[selMode]);
+    bt.text(SEL_MODES[selMode] + " ");
   else
     bt.text("Mode ");
   bt.append("span")
@@ -538,7 +539,7 @@ function drawControl() {
     .attr("for", "delay")
     .classed({"control-label": true})
     .text("Delay");
-  e.append("div").classed({"col-xs-11": true})
+  e.append("div").classed({"col-xs-10": true})
     .append("input").attr("id", "delay")
     .attr("type", "range")
     .attr("min", 0).attr("max", 2000)
@@ -663,17 +664,11 @@ function paint(mode, sels, ts, rids, nexts) {
     cs.push("#c" + ts[i][0]);
     cs.push("#c" + ts[i][1]);
 
-    console.log(sels[i][0].name + " " + sels[i][0].remIndex
-               + ", " + sels[i][1].name + " " + sels[i][1].remIndex
-               + ", " + rids[i]);
+    //console.log(sels[i][0].name + " " + sels[i][0].remIndex
+               //+ ", " + sels[i][1].name + " " + sels[i][1].remIndex
+               //+ ", " + rids[i]);
 
     if (rids[i] != -1) {
-      // Updates rems and objs
-      //rems[sels[i][0].name].splice(sels[i][0].remIndex, 1);
-      //if (sels[i][0].name == sels[i][1].name && sels[i][0].remIndex < sels[i][1].remIndex)
-        //rems[sels[i][1].name].splice(sels[i][1].remIndex - 1, 1);
-      //else
-        //rems[sels[i][1].name].splice(sels[i][1].remIndex, 1);
       objs[ts[i][0]].name = nexts[i][0];
       objs[ts[i][1]].name = nexts[i][1];
       rems[nexts[i][0]].push(ts[i][0]);
@@ -686,17 +681,30 @@ function paint(mode, sels, ts, rids, nexts) {
 
       nextMap[ts[i][0]] = nexts[i][0];
       nextMap[ts[i][1]] = nexts[i][1];
-   }
+    }
   }
-  console.log(cs);
-  console.log(nextMap);
+  //console.log(cs);
+  //console.log(nextMap);
 
+  // Deletes from right to left in rems using indices.
   for (var s in delRemInd) {
-    delRemInd[s].sort();
+    delRemInd[s].sort(function(a,b) {
+      return a - b;
+    });
     //console.log(delRemInd[s]);
 
     for (var i = delRemInd[s].length - 1; i >= 0; i--) {
       rems[s].splice(delRemInd[s][i], 1);
+    }
+
+    for (var i = 0; i < rems[s].length; i++) {
+      for (var j = i+1; j < rems[s].length; j++) {
+        if (rems[s][i] == rems[s][j]) {
+          //console.log("Found dup " + s + ", i: " + i + ", j: " + j + ", c: " + rems[s][i]);
+          //console.log(rems);
+          return;
+        }
+      }
     }
   }
 
@@ -719,7 +727,6 @@ function paint(mode, sels, ts, rids, nexts) {
   if (highlightState) {
     sl.attr("stroke-width", "0")
       .attr("stroke", function(d, i) {
-        console.log("First " + i + ", id: " + d.id + ", next: " + nextMap[d.id]);
         return (nextMap.hasOwnProperty(d.id)) ? selColor : selRedColor;
       });
   }
@@ -729,7 +736,7 @@ function paint(mode, sels, ts, rids, nexts) {
     .attr("stroke-width", "3")
     .attr("stroke-opacity", "0.9")
     .each("end", function(d, i) {  // End of selection highlights
-      console.log(i + ", id: " + d.id + ", next: " + nextMap[d.id]);
+      //console.log(i + ", id: " + d.id + ", next: " + nextMap[d.id]);
       // If found a rule
       if (nextMap.hasOwnProperty(d.id)) {
         // Fills new color
@@ -764,64 +771,6 @@ function paint(mode, sels, ts, rids, nexts) {
           });
       }
     });
-
-
-
-  /*for (var j = 0; j < cs.length; j += 2) {
-    // Highlights states
-    var sl = svg.selectAll([cs[j], cs[j+1]]);
-    if (highlightState) {
-      sl.attr("stroke-width", "0")
-        .attr("stroke", function(d, i) {
-          console.log("First " + i + ", " + j + ", rid: " + rids[j/2]);
-          return (rids[j/2] != -1) ? selColor : selRedColor;
-        });
-    }
-    sl.transition()
-      .duration(delay)
-      .attr("stroke-width", "3")
-      .attr("stroke-opacity", "0.9")
-      .each("end", function(d, i) {  // End of selection highlights
-        console.log(d);
-        console.log(i + ", " + j + ", rid: " + rids[j/2]);
-        // If found a rule
-        if (rids[j/2] != -1) {
-          // Fills new color
-          svg.select(cs[j+i])
-            .transition()
-            .duration(delay)
-            .attr("fill", colors[states[nexts[Math.floor(j/2)][i%2]].color])
-            .attr("stroke-width", "0")
-            .each("end", function() {
-              // Runs again
-              if (mode == "run" && j+i == cs.length-1)
-                sim("run");
-            });
-
-          // Changes label
-          svg.select("#t" + ts[Math.floor(j/2)][i%2])
-            .transition()
-            .duration(delay)
-            .text(function() {
-              return states[nexts[Math.floor(j/2)][i%2]].label;
-            });
-        } else {
-          // No rules: only removes the highlights
-          svg.select(cs[j+i])
-            .transition()
-            .duration(delay)
-            .attr("stroke-width", "0")
-            .each("end", function() {
-              // Runs again
-              if (mode == "run" && j+i == cs.length-1)
-                sim("run");
-            });
-        }
-      });
-
-  }*/
-
-
 }
 
 function simAllPairs(mode) {
@@ -835,7 +784,7 @@ function simAllPairs(mode) {
     perms[i] = perms[j];
     perms[j] = temp;
   }
-  console.log(perms);
+  //console.log(perms);
 
   // Finds indices in rems
   var sels = [];
