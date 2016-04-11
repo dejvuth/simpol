@@ -100,19 +100,24 @@ var showLabel = true;
 if (localStorage.hasOwnProperty("showLabel")) {
   showLabel = localStorage.getItem("showLabel") === "true";
 }
-var simTime = true;
-if (localStorage.hasOwnProperty("simTime")) {
-  simTime = localStorage.getItem("simTime") === "true";
-}
+//var simTime = true;
+//if (localStorage.hasOwnProperty("simTime")) {
+//  simTime = localStorage.getItem("simTime") === "true";
+//}
 var selColor = "#4E443C";
 var selRedColor = "#EB4B2B";
+var selMode;
+if (localStorage.hasOwnProperty("selMode")) {
+  selMode = localStorage.getItem("selMode");
+}
+const SEL_MODES = [ "", "Any pair", "Any pair with rule", "All pairs" ];
 
 var svg;
 var rsvg;
 
 var inits;
 var objs;  // array of state names and x,y positions
-var rems;  // maps state names to remaining numbers of states
+var rems;  // maps state names to remaining state indices
 
 // Draws init
 function drawInit() {
@@ -425,6 +430,14 @@ function stop() {
   d3.select("#step").style({"pointer-events": "all"});
 }
 
+function changeMode(m) {
+  selMode = m;
+  d3.select("#selMode")
+    .text(SEL_MODES[m] + " ")
+    .append("span")
+    .classed({ "caret": true });
+}
+
 // Draws controls
 function drawControl() {
   var d = d3.select("#controlDiv");
@@ -475,20 +488,44 @@ function drawControl() {
   });
 
   // Adds time switch
-  var ts = e.append("div").classed({ "col-xs-3": true })
-    .append("input")
-    .attr("id", "timeSwitch")
-    .attr("name", "timeSwitch")
-    .attr("type", "checkbox")
-    .attr("data-label-text", "Time");
-  if (simTime) {
-    ts.attr("checked", "");
+  //var ts = e.append("div").classed({ "col-xs-3": true })
+    //.append("input")
+    //.attr("id", "timeSwitch")
+    //.attr("name", "timeSwitch")
+    //.attr("type", "checkbox")
+    //.attr("data-label-text", "Time");
+  //if (simTime) {
+    //ts.attr("checked", "");
+  //}
+  //$("[name='timeSwitch']").bootstrapSwitch();
+  //$('input[name="timeSwitch"]').on('switchChange.bootstrapSwitch', function(event, state) {
+    //simTime = state;
+    //localStorage.setItem("simTime", simTime);
+  //});
+  var ts = e.append("div")
+    .classed({ "col-xs-3": true })
+    .append("div")
+    .classed({ "dropdown": true });
+  var bt = ts.append("button")
+    .attr("id", "selMode")
+    .classed({ "btn": true, "btn-default": true, "dropdown-toggle": true })
+    .attr("type", "button")
+    .attr("data-toggle", "dropdown");
+  if (selMode)
+    bt.text(SEL_MODES[selMode]);
+  else
+    bt.text("Mode ");
+  bt.append("span")
+    .classed({ "caret": true });
+  var ul = ts.append("ul")
+    .classed({ "dropdown-menu": true });
+  for (var i = 1; i < SEL_MODES.length; i++) {
+    ul.append("li")
+      .append("a")
+      .attr("href", "#")
+      .attr("onclick", "changeMode(" + i + ")")
+      .text(SEL_MODES[i]);
   }
-  $("[name='timeSwitch']").bootstrapSwitch();
-  $('input[name="timeSwitch"]').on('switchChange.bootstrapSwitch', function(event, state) {
-    simTime = state;
-    localStorage.setItem("simTime", simTime);
-  });
 
   // Adds delay control
   var e = d.append("div").classed({ "form-group": true })
@@ -591,6 +628,196 @@ function findRule(s1, s2) {
   return null;
 }
 
+// Finds out the indices of the states in rems from objs indices a,b
+// [ {name, remIndex}, {name, remIndex} ]
+function findSel(a, b) {
+  sel = [{}, {}];
+  var rsum = 0;
+  for (var i = 0; i < stateNames.length; i++) {
+    var l = rems[stateNames[i]].length;
+    if (rsum <= a && a < rsum + l) {
+      sel[0]["name"] = stateNames[i];
+      sel[0]["remIndex"] = a - rsum;
+    }
+    if (rsum <= b && b < rsum + l) {
+      sel[1]["name"] = stateNames[i];
+      sel[1]["remIndex"] = b - rsum;
+    }
+    rsum += l;
+  }
+  return sel
+}
+
+function paint(mode, sels, ts, rids, nexts) {
+  var cs = [];
+  var delRemInd = {};
+  for (var s in states) {
+    delRemInd[s] = [];
+  }
+  var ridSet = d3.set();
+  for (var i = 0; i < sels.length; i++) {
+    cs.push("#c" + ts[i][0]);
+    cs.push("#c" + ts[i][1]);
+
+    console.log(sels[i][0].name + " " + sels[i][0].remIndex
+               + ", " + sels[i][1].name + " " + sels[i][1].remIndex
+               + ", " + rids[i]);
+
+    if (rids[i] != -1) {
+      // Updates rems and objs
+      //rems[sels[i][0].name].splice(sels[i][0].remIndex, 1);
+      //if (sels[i][0].name == sels[i][1].name && sels[i][0].remIndex < sels[i][1].remIndex)
+        //rems[sels[i][1].name].splice(sels[i][1].remIndex - 1, 1);
+      //else
+        //rems[sels[i][1].name].splice(sels[i][1].remIndex, 1);
+      objs[ts[i][0]].name = nexts[i][0];
+      objs[ts[i][1]].name = nexts[i][1];
+      rems[nexts[i][0]].push(ts[i][0]);
+      rems[nexts[i][1]].push(ts[i][1]);
+
+      delRemInd[sels[i][0].name].push(sels[i][0].remIndex);
+      delRemInd[sels[i][1].name].push(sels[i][1].remIndex);
+
+      ridSet.add(".rule" + rids[i]);
+   }
+  }
+  console.log(cs);
+
+  for (var s in delRemInd) {
+    delRemInd[s].sort();
+    console.log(delRemInd[s]);
+
+    for (var i = delRemInd[s].length - 1; i >= 0; i--) {
+      rems[s].splice(delRemInd[s][i], 1);
+    }
+  }
+
+  // Highlights rule
+  if (!ridSet.empty()) {
+    rsvg.selectAll(ridSet.values())
+      .attr("stroke", selColor)
+      .attr("stroke-width", "3")
+      .attr("stroke-opacity", "0.9")
+      .transition()
+      .duration(2*delay)
+      .each("end", function() {
+        //rsvg.selectAll(".rule" + rid)
+        d3.select(this)
+          .attr("stroke", "none");
+      });
+  }
+
+
+  // Highlights states
+  var sl = svg.selectAll(cs);
+  if (highlightState) {
+    sl.attr("stroke-width", "0")
+      .attr("stroke", function(d, i) {
+        console.log(i + " " + d + " " + rids[Math.floor(i/2)]);
+        return (rids[Math.floor(i/2)] != -1) ? selColor : selRedColor;
+      });
+  }
+  sl.transition()
+    .duration(delay)
+    .attr("stroke-width", "3")
+    .attr("stroke-opacity", "0.9")
+    .each("end", function(d, i) {  // End of selection highlights
+      // If found a rule
+      if (rids[Math.floor(i/2)] != -1) {
+        // Fills new color
+        svg.select(cs[i])
+          .transition()
+          .duration(delay)
+          .attr("fill", colors[states[nexts[Math.floor(i/2)][i%2]].color])
+          .attr("stroke-width", "0")
+          .each("end", function() {
+            // Runs again
+            if (mode == "run" && i == cs.length-1)
+              sim("run");
+          });
+
+        // Changes label
+        svg.select("#t" + ts[Math.floor(i/2)][i%2])
+          .transition()
+          .duration(delay)
+          .text(function() {
+            return states[nexts[Math.floor(i/2)][i%2]].label;
+          });
+      } else {
+        // No rules: only removes the highlights
+        svg.select(cs[i])
+          .transition()
+          .duration(delay)
+          .attr("stroke-width", "0")
+          .each("end", function() {
+            // Runs again
+            if (mode == "run" && i == cs.length-1)
+              sim("run");
+          });
+      }
+    });
+}
+
+function simAllPairs(mode) {
+  // Permutes indices [0, ..., objs.length-1]
+  var perms = [];
+  for (var i = 0; i < objs.length; i++)
+    perms.push(i);
+  for (var i = perms.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var temp = perms[i];
+    perms[i] = perms[j];
+    perms[j] = temp;
+  }
+  console.log(perms);
+
+  // Finds indices in rems
+  var sels = [];
+  for (var i = 0; i < perms.length-1; i += 2) {
+    // Saves the pair
+    sels.push(findSel(perms[i], perms[i+1]));
+  }
+
+  // Find applicable rules
+  var rss = [];
+  var ts = []
+  var rids = [];
+  var nexts = [];
+  for (var i = 0; i < sels.length; i++) {
+    // Finds rules
+    var rs = null;
+    if (inrules.hasOwnProperty(sels[i][0].name)) {
+      if (inrules[sels[i][0].name].hasOwnProperty(sels[i][1].name))
+        rs = inrules[sels[i][0].name][sels[i][1].name];
+    }
+    if (rs == null && inrules.hasOwnProperty(sels[i][1].name)) {
+      if (inrules[sels[i][1].name].hasOwnProperty(sels[i][0].name)) {
+        // Swaps the selected pair to correct ordering
+        var tmp = sels[i][0];
+        sels[i][0] = sels[i][1];
+        sels[i][1] = tmp;
+        rs = inrules[sels[i][0].name][sels[i][1].name];
+      }
+    }
+    rss.push(rs);
+
+    // Saves source processes
+    ts.push([rems[sels[i][0].name][sels[i][0].remIndex],
+            rems[sels[i][1].name][sels[i][1].remIndex]]);
+
+    // Saves the rule
+    if (rs != null) {
+      rids.push(rs.id);
+      nexts.push(rs.r);
+    } else {
+      rids.push(-1);
+      nexts.push(null);
+    }
+  }
+
+  paint(mode, sels, ts, rids, nexts);
+}
+
 // Simulator function
 var run = false;
 var stepCount = 0;
@@ -600,9 +827,9 @@ sim = function(mode) {
     return;
 
   var pick = 0;
-  var t = [-1, -1];  // current states
+  var t = [-1, -1];  // current states [0..obsj.length-1, 0..objs.length-1]
   var rid = -1;  // rule id
-  var next = null;    // next states
+  var next = null;    // next states [name, name]
 
   // Checks for applicable rules
   if (!hasRule()) {
@@ -613,8 +840,12 @@ sim = function(mode) {
 
   var sel;  // [ {name, remIndex}, {name, remIndex} ]
 
-  // Time ON
-  if (simTime) {
+  if (!selMode) {
+    toastr.error("No mode selected");
+    stop();
+    return;
+  }
+  if (selMode == 1) {  // Any pair
     // Randomly picks a pair of states
     var rands = [-1, -1]
     do {
@@ -623,26 +854,15 @@ sim = function(mode) {
     } while (rands[0] == rands[1]);  // until the states are not identical
 
     // Finds out the indices of the states in rems
-    sel = [{}, {}];
-    var rsum = 0;
-    for (var i = 0; i < stateNames.length; i++) {
-      var l = rems[stateNames[i]].length;
-      if (rsum <= rands[0] && rands[0] < rsum + l) {
-        sel[0]["name"] = stateNames[i];
-        sel[0]["remIndex"] = rands[0] - rsum;
-      } if (rsum <= rands[1] && rands[1] < rsum + l) {
-        sel[1]["name"] = stateNames[i];
-        sel[1]["remIndex"] = rands[1] - rsum;
-      }
-      rsum += l;
-    }
+    sel = findSel(rands[0], rands[1]);
 
     // Finds rule from the pair
     var rs = null;
     if (inrules.hasOwnProperty(sel[0].name)) {
       if (inrules[sel[0].name].hasOwnProperty(sel[1].name))
         rs = inrules[sel[0].name][sel[1].name];
-    } else if (inrules.hasOwnProperty(sel[1].name)) {
+    }
+    if (rs == null && inrules.hasOwnProperty(sel[1].name)) {
       if (inrules[sel[1].name].hasOwnProperty(sel[0].name)) {
         // Swaps the selected pair to correct ordering
         var tmp = sel[0];
@@ -659,9 +879,7 @@ sim = function(mode) {
       rid = rs.id;
       next = rs.r;
     }
-  }
-  // Time OFF
-  else {
+  } else if (selMode == 2) {  // Any pair with rule
     var rs = randomSelect();
     sel = rs.sel;
     t[0] = rems[sel[0]["name"]][sel[0]["remIndex"]];
@@ -669,9 +887,14 @@ sim = function(mode) {
 
     rid = rs.id;
     next = rs.next;
+  } else {  // All pairs
+    simAllPairs(mode);
+    return;
   }
 
-  if (rid != -1) {
+  paint(mode, [sel], [t], [rid], [next]);
+
+/*  if (rid != -1) {
     //console.log(t[0] + "," + t[1] + " - " + rid
                 //+ " " + objs[t[0]].name + "," + objs[t[1]].name + " -> " + next);
 
@@ -745,7 +968,7 @@ sim = function(mode) {
               sim("run");
           });
       }
-    });
+    });*/
 }
 
 // Draws everything
