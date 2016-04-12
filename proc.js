@@ -652,7 +652,7 @@ function findSel(a, b) {
   return sel
 }
 
-function paint(mode, sels, ts, rids, nexts) {
+function paint(mode, sels, srcs, rids, nexts) {
   var cs = [];
   var nextMap = {};
   var delRemInd = {};
@@ -661,26 +661,26 @@ function paint(mode, sels, ts, rids, nexts) {
   }
   var ridSet = d3.set();
   for (var i = 0; i < sels.length; i++) {
-    cs.push("#c" + ts[i][0]);
-    cs.push("#c" + ts[i][1]);
+    cs.push("#c" + srcs[i][0]);
+    cs.push("#c" + srcs[i][1]);
 
     //console.log(sels[i][0].name + " " + sels[i][0].remIndex
                //+ ", " + sels[i][1].name + " " + sels[i][1].remIndex
                //+ ", " + rids[i]);
 
     if (rids[i] != -1) {
-      objs[ts[i][0]].name = nexts[i][0];
-      objs[ts[i][1]].name = nexts[i][1];
-      rems[nexts[i][0]].push(ts[i][0]);
-      rems[nexts[i][1]].push(ts[i][1]);
+      objs[srcs[i][0]].name = nexts[i][0];
+      objs[srcs[i][1]].name = nexts[i][1];
+      rems[nexts[i][0]].push(srcs[i][0]);
+      rems[nexts[i][1]].push(srcs[i][1]);
 
       delRemInd[sels[i][0].name].push(sels[i][0].remIndex);
       delRemInd[sels[i][1].name].push(sels[i][1].remIndex);
 
       ridSet.add(".rule" + rids[i]);
 
-      nextMap[ts[i][0]] = nexts[i][0];
-      nextMap[ts[i][1]] = nexts[i][1];
+      nextMap[srcs[i][0]] = nexts[i][0];
+      nextMap[srcs[i][1]] = nexts[i][1];
     }
   }
   //console.log(cs);
@@ -695,16 +695,6 @@ function paint(mode, sels, ts, rids, nexts) {
 
     for (var i = delRemInd[s].length - 1; i >= 0; i--) {
       rems[s].splice(delRemInd[s][i], 1);
-    }
-
-    for (var i = 0; i < rems[s].length; i++) {
-      for (var j = i+1; j < rems[s].length; j++) {
-        if (rems[s][i] == rems[s][j]) {
-          //console.log("Found dup " + s + ", i: " + i + ", j: " + j + ", c: " + rems[s][i]);
-          //console.log(rems);
-          return;
-        }
-      }
     }
   }
 
@@ -723,6 +713,7 @@ function paint(mode, sels, ts, rids, nexts) {
       });
   }
 
+  // Highlights states
   var sl = svg.selectAll(cs);
   if (highlightState) {
     sl.attr("stroke-width", "0")
@@ -731,6 +722,8 @@ function paint(mode, sels, ts, rids, nexts) {
       });
   }
 
+  // Removes state highlights, and if applicable,
+  // changes state colors and labels
   sl.transition()
     .duration(delay)
     .attr("stroke-width", "3")
@@ -774,7 +767,7 @@ function paint(mode, sels, ts, rids, nexts) {
 }
 
 function simAllPairs(mode) {
-  // Permutes indices [0, ..., objs.length-1]
+  // Permutes indices [0, ..., objs.length-1] with Fisher-Yates shuffle
   var perms = [];
   for (var i = 0; i < objs.length; i++)
     perms.push(i);
@@ -784,7 +777,6 @@ function simAllPairs(mode) {
     perms[i] = perms[j];
     perms[j] = temp;
   }
-  //console.log(perms);
 
   // Finds indices in rems
   var sels = [];
@@ -795,7 +787,7 @@ function simAllPairs(mode) {
 
   // Find applicable rules
   var rss = [];
-  var ts = []
+  var srcs = []
   var rids = [];
   var nexts = [];
   for (var i = 0; i < sels.length; i++) {
@@ -817,7 +809,7 @@ function simAllPairs(mode) {
     rss.push(rs);
 
     // Saves source processes
-    ts.push([rems[sels[i][0].name][sels[i][0].remIndex],
+    srcs.push([rems[sels[i][0].name][sels[i][0].remIndex],
             rems[sels[i][1].name][sels[i][1].remIndex]]);
 
     // Saves the rule
@@ -830,19 +822,19 @@ function simAllPairs(mode) {
     }
   }
 
-  paint(mode, sels, ts, rids, nexts);
+  paint(mode, sels, srcs, rids, nexts);
 }
 
 // Simulator function
 var run = false;
 var stepCount = 0;
 sim = function(mode) {
-  // Checks the mode
+  // Checks the simulation mode
   if (mode == "run" && !run)
     return;
 
   var pick = 0;
-  var t = [-1, -1];  // current states [0..obsj.length-1, 0..objs.length-1]
+  var src = [-1, -1];  // current states [0..obsj.length-1, 0..objs.length-1]
   var rid = -1;  // rule id
   var next = null;    // next states [name, name]
 
@@ -855,11 +847,13 @@ sim = function(mode) {
 
   var sel;  // [ {name, remIndex}, {name, remIndex} ]
 
+  // Checks if the mode is selected
   if (!selMode) {
     toastr.error("No mode selected");
     stop();
     return;
   }
+
   if (selMode == 1) {  // Any pair
     // Randomly picks a pair of states
     var rands = [-1, -1]
@@ -887,8 +881,8 @@ sim = function(mode) {
       }
     }
 
-    t[0] = rems[sel[0].name][sel[0].remIndex];
-    t[1] = rems[sel[1].name][sel[1].remIndex];
+    src[0] = rems[sel[0].name][sel[0].remIndex];
+    src[1] = rems[sel[1].name][sel[1].remIndex];
 
     if (rs != null) {
       rid = rs.id;
@@ -897,8 +891,8 @@ sim = function(mode) {
   } else if (selMode == 2) {  // Any pair with rule
     var rs = randomSelect();
     sel = rs.sel;
-    t[0] = rems[sel[0]["name"]][sel[0]["remIndex"]];
-    t[1] = rems[sel[1]["name"]][sel[1]["remIndex"]];
+    src[0] = rems[sel[0]["name"]][sel[0]["remIndex"]];
+    src[1] = rems[sel[1]["name"]][sel[1]["remIndex"]];
 
     rid = rs.id;
     next = rs.next;
@@ -907,83 +901,7 @@ sim = function(mode) {
     return;
   }
 
-  paint(mode, [sel], [t], [rid], [next]);
-
-/*  if (rid != -1) {
-    //console.log(t[0] + "," + t[1] + " - " + rid
-                //+ " " + objs[t[0]].name + "," + objs[t[1]].name + " -> " + next);
-
-    // Updates rems and objs
-    rems[sel[0].name].splice(sel[0].remIndex, 1);
-    if (sel[0].name == sel[1].name && sel[0].remIndex < sel[1].remIndex)
-      rems[sel[1].name].splice(sel[1].remIndex - 1, 1);
-    else
-      rems[sel[1].name].splice(sel[1].remIndex, 1);
-    objs[t[0]].name = next[0];
-    objs[t[1]].name = next[1];
-    rems[next[0]].push(t[0]);
-    rems[next[1]].push(t[1]);
-
-    // Highlights rule
-    rsvg.selectAll(".rule" + rid)
-      .attr("stroke", selColor)
-      .attr("stroke-width", "3")
-      .attr("stroke-opacity", "0.9")
-      .transition()
-      .duration(2*delay)
-      .each("end", function() {
-        rsvg.selectAll(".rule" + rid)
-          .attr("stroke", "none");
-      });
-  }
-
-  // Highlights states
-  var sl = svg.selectAll([ "#c"+t[0], "#c"+t[1] ]);
-  if (highlightState) {
-    sl.attr("stroke-width", "0")
-      .attr("stroke", function() {
-      return (rid != -1) ? selColor : selRedColor;
-    });
-  }
-  sl.transition()
-    .duration(delay)
-    .attr("stroke-width", "3")
-    .attr("stroke-opacity", "0.9")
-    .each("end", function(d, i) {  // End of selection highlights
-      // If found a rule
-      if (rid != -1) {
-        // Fills new color
-        svg.select("#c" + t[i])
-          .transition()
-          .duration(delay)
-          .attr("fill", colors[states[next[i]].color])
-          .attr("stroke-width", "0")
-          .each("end", function() {
-            // Runs again
-            if (mode == "run" && i%2 == 1)
-              sim("run");
-          });
-
-        // Changes label
-        svg.select("#t" + t[i])
-          .transition()
-          .duration(delay)
-          .text(function() {
-            return states[next[i]].label;
-          });
-      } else {
-        // No rules: only removes the highlights
-        svg.select("#c" + t[i])
-          .transition()
-          .duration(delay)
-          .attr("stroke-width", "0")
-          .each("end", function() {
-            // Runs again
-            if (mode == "run" && i%2 == 1)
-              sim("run");
-          });
-      }
-    });*/
+  paint(mode, [sel], [src], [rid], [next]);
 }
 
 // Draws everything
