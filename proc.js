@@ -100,17 +100,13 @@ var showLabel = true;
 if (localStorage.hasOwnProperty("showLabel")) {
   showLabel = localStorage.getItem("showLabel") === "true";
 }
-//var simTime = true;
-//if (localStorage.hasOwnProperty("simTime")) {
-//  simTime = localStorage.getItem("simTime") === "true";
-//}
 var selColor = "#4E443C";
 var selRedColor = "#EB4B2B";
 var selMode;
 if (localStorage.hasOwnProperty("selMode")) {
   selMode = localStorage.getItem("selMode");
 }
-const SEL_MODES = [ "", "Any pair", "Any pair with rule", "All pairs" ];
+const SEL_MODES = [ "", "Sequential", "Sequential Timed", "Parallel" ];
 
 var svg;
 var rsvg;
@@ -433,6 +429,7 @@ function stop() {
   d3.select("#step").style({"pointer-events": "all"});
 }
 
+// Changes the selection mode
 function changeMode(m) {
   selMode = m;
   d3.select("#selMode")
@@ -491,21 +488,7 @@ function drawControl() {
     svg.selectAll("text").attr("opacity", (showLabel) ? 1 : 0);
   });
 
-  // Adds time switch
-  //var ts = e.append("div").classed({ "col-xs-3": true })
-    //.append("input")
-    //.attr("id", "timeSwitch")
-    //.attr("name", "timeSwitch")
-    //.attr("type", "checkbox")
-    //.attr("data-label-text", "Time");
-  //if (simTime) {
-    //ts.attr("checked", "");
-  //}
-  //$("[name='timeSwitch']").bootstrapSwitch();
-  //$('input[name="timeSwitch"]').on('switchChange.bootstrapSwitch', function(event, state) {
-    //simTime = state;
-    //localStorage.setItem("simTime", simTime);
-  //});
+  // Adds mode selection dropdown
   var ts = e.append("div")
     .classed({ "col-xs-3": true })
     .append("div")
@@ -572,7 +555,11 @@ function hasRule() {
   return false;
 }
 
-function randomSelect() {
+// Selects sequentially
+// { "id": rid,
+//   "sel": [ {"name", "remIndex"}, {"name", "remIndex"} ],
+//   "next": [ x,y ] }
+function seqSelect() {
   // Calculates rule probs
   var psum = 0;
   var rprob = [];
@@ -588,7 +575,6 @@ function randomSelect() {
     psum += p;
     rprob.push(psum);
   }
-  //console.log("rprob: " + rprob);
 
   // Randomly picks a rule
   var r = random(psum);
@@ -609,27 +595,10 @@ function randomSelect() {
     rs1 = random(rems[s1].length);
     rs2 = random(rems[s2].length);
   }
-  //console.log(rs1 + " " + rs2);
 
   return { "id": rid,
     "sel": [ { "name": s1, "remIndex": rs1 }, { "name": s2, "remIndex": rs2 } ],
     "next": [ robjs[rid].states[2][1], robjs[rid].states[3][1] ]};
-}
-
-// Returns { id, r: [t1, t2] } for rule (s1,s2) -> (t1,t2);
-// or null if no such rules with (s1,s2)
-function findRule(s1, s2) {
-  if (inrules.hasOwnProperty(s2)) {
-    if (inrules[s2].hasOwnProperty(s1))
-      return inrules[s2][s1];
-  }
-
-  if (inrules.hasOwnProperty(s1)) {
-    if (inrules[s1].hasOwnProperty(s2))
-      return inrules[s1][s2];
-  }
-
-  return null;
 }
 
 // Finds out the indices of the states in rems from objs indices a,b
@@ -652,7 +621,8 @@ function findSel(a, b) {
   return sel
 }
 
-function paint(mode, sels, srcs, rids, nexts) {
+// Paints the selections
+function paint(mode, sels, rids, nexts) {
   var cs = [];
   var nextMap = {};
   var delRemInd = {};
@@ -661,26 +631,31 @@ function paint(mode, sels, srcs, rids, nexts) {
   }
   var ridSet = d3.set();
   for (var i = 0; i < sels.length; i++) {
-    cs.push("#c" + srcs[i][0]);
-    cs.push("#c" + srcs[i][1]);
+    // source states [0..n-1, 0..n-1]
+    var src = [
+      rems[sels[i][0].name][sels[i][0].remIndex],
+      rems[sels[i][1].name][sels[i][1].remIndex] ];
+
+    cs.push("#c" + src[0]);
+    cs.push("#c" + src[1]);
 
     //console.log(sels[i][0].name + " " + sels[i][0].remIndex
                //+ ", " + sels[i][1].name + " " + sels[i][1].remIndex
                //+ ", " + rids[i]);
 
     if (rids[i] != -1) {
-      objs[srcs[i][0]].name = nexts[i][0];
-      objs[srcs[i][1]].name = nexts[i][1];
-      rems[nexts[i][0]].push(srcs[i][0]);
-      rems[nexts[i][1]].push(srcs[i][1]);
+      objs[src[0]].name = nexts[i][0];
+      objs[src[1]].name = nexts[i][1];
+      rems[nexts[i][0]].push(src[0]);
+      rems[nexts[i][1]].push(src[1]);
 
       delRemInd[sels[i][0].name].push(sels[i][0].remIndex);
       delRemInd[sels[i][1].name].push(sels[i][1].remIndex);
 
       ridSet.add(".rule" + rids[i]);
 
-      nextMap[srcs[i][0]] = nexts[i][0];
-      nextMap[srcs[i][1]] = nexts[i][1];
+      nextMap[src[0]] = nexts[i][0];
+      nextMap[src[1]] = nexts[i][1];
     }
   }
   //console.log(cs);
@@ -718,7 +693,12 @@ function paint(mode, sels, srcs, rids, nexts) {
   if (highlightState) {
     sl.attr("stroke-width", "0")
       .attr("stroke", function(d, i) {
-        return (nextMap.hasOwnProperty(d.id)) ? selColor : selRedColor;
+        if (nextMap.hasOwnProperty(d.id))
+          return selColor;
+        if (selMode == 1 || selMode == 2)
+          return selRedColor;
+        return null;
+        //return (nextMap.hasOwnProperty(d.id)) ? selColor : selRedColor;
       });
   }
 
@@ -787,7 +767,6 @@ function simAllPairs(mode) {
 
   // Find applicable rules
   var rss = [];
-  var srcs = []
   var rids = [];
   var nexts = [];
   for (var i = 0; i < sels.length; i++) {
@@ -808,10 +787,6 @@ function simAllPairs(mode) {
     }
     rss.push(rs);
 
-    // Saves source processes
-    srcs.push([rems[sels[i][0].name][sels[i][0].remIndex],
-            rems[sels[i][1].name][sels[i][1].remIndex]]);
-
     // Saves the rule
     if (rs != null) {
       rids.push(rs.id);
@@ -822,7 +797,7 @@ function simAllPairs(mode) {
     }
   }
 
-  paint(mode, sels, srcs, rids, nexts);
+  paint(mode, sels, rids, nexts);
 }
 
 // Simulator function
@@ -834,7 +809,6 @@ sim = function(mode) {
     return;
 
   var pick = 0;
-  var src = [-1, -1];  // current states [0..obsj.length-1, 0..objs.length-1]
   var rid = -1;  // rule id
   var next = null;    // next states [name, name]
 
@@ -854,7 +828,7 @@ sim = function(mode) {
     return;
   }
 
-  if (selMode == 1) {  // Any pair
+  if (selMode == 2) {  // Any pair
     // Randomly picks a pair of states
     var rands = [-1, -1]
     do {
@@ -881,18 +855,13 @@ sim = function(mode) {
       }
     }
 
-    src[0] = rems[sel[0].name][sel[0].remIndex];
-    src[1] = rems[sel[1].name][sel[1].remIndex];
-
     if (rs != null) {
       rid = rs.id;
       next = rs.r;
     }
-  } else if (selMode == 2) {  // Any pair with rule
-    var rs = randomSelect();
+  } else if (selMode == 1) {  // Any pair with rule
+    var rs =seqSelect();
     sel = rs.sel;
-    src[0] = rems[sel[0]["name"]][sel[0]["remIndex"]];
-    src[1] = rems[sel[1]["name"]][sel[1]["remIndex"]];
 
     rid = rs.id;
     next = rs.next;
@@ -901,7 +870,7 @@ sim = function(mode) {
     return;
   }
 
-  paint(mode, [sel], [src], [rid], [next]);
+  paint(mode, [sel], [rid], [next]);
 }
 
 // Draws everything
