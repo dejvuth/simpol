@@ -22,6 +22,7 @@ var colors = {
 var title;
 var outputs;
 var states;
+var initial;
 var rules;
 
 var stateNames;  // in ascending order
@@ -121,27 +122,36 @@ function drawInit() {
   var count = 0;
   var d;
   for (var s in states) {
-    // Draws state
+    // New row every two columns
     if (count % 2 == 0)
       d = f.append("div").classed("form-group", true);
+
+    // Draws state
     var l = d.append("label")
       .attr("for", s)
       .classed({"col-xs-2": true, "control-label": true})
       .style("padding-top", "0px")
       .style("text-align", "right");
-    var isvg = l.append("svg").attr("width", 2*(ruler)).attr("height", 2*(ruler));
-    isvg.append("circle")
-      .attr("cx", ruler)
-      .attr("cy", ruler)
+    var isvg = l.append("svg")
+      .attr("width", 2*(ruler + padding))
+      .attr("height", 2*(ruler + padding));
+    var c = isvg.append("circle")
+      .attr("cx", ruler + padding)
+      .attr("cy", ruler + padding)
       .attr("r", ruler)
       .attr("fill", function(d) {
         return colors[states[s].color];
       })
-      .attr("opacity", opacity);;
+      .attr("fill-opacity", opacity);
+    if (initial && initial.indexOf(s) >= 0) {
+      c.attr("stroke", selColor)
+        .attr("stroke-width", "2")
+        .attr("stroke-opacity", "0.9");
+    }
     isvg.append("text")
       .text(states[s].label)
-      .attr("x", ruler)
-      .attr("y", ruler)
+      .attr("x", ruler + padding)
+      .attr("y", ruler + padding)
       .attr("text-anchor", "middle")
       .attr("dy", "0.3em")
       .attr("font-family", "sans-serif")
@@ -909,6 +919,7 @@ function load() {
     reader.onload = function(e) {
       try {
         // Evals the result
+        initial = null;
         eval(reader.result);
         d3.select("#title").html((title) ? title : "&nbsp;");
         parseRules(rules);

@@ -12,12 +12,12 @@ states = {
   "AY": {
     "output": "yes",
     "label": 1,
-    "init": 400
+    "init": 10,
   },
   "AN": {
     "output": "no",
     "label": 2,
-    "init": 5
+    "init": 10
   },
   "PY": {
     "output": "yes",
@@ -30,6 +30,7 @@ states = {
     "init": 0
   },
 };
+initial = ["AY", "AN"];
 rules = [
   "AY, AN -> PY, PY",
   "AY, PN -> AY, PY",

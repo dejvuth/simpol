@@ -35,6 +35,7 @@ states = {
     "init": 0
   },
   };
+initial = ["M1"];
 rules = [
   "M0, M1 -> M1, NO",
   "M0, M2 -> M2, NO",
