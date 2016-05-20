@@ -12,12 +12,12 @@ states = {
   "AY": {
     "output": "yes",
     "label": 1,
-    "init": 10,
+    "init": 20,
   },
   "AN": {
     "output": "no",
     "label": 2,
-    "init": 10
+    "init": 19
   },
   "PY": {
     "output": "yes",

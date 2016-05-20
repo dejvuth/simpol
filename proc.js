@@ -906,6 +906,19 @@ function toast(err) {
     toastr.error(err);
 }
 
+// Parses config and draw
+function parseConfigAndDraw(conf) {
+  try {
+    // Evals the result
+    eval(conf);
+    d3.select("#title").html((title) ? title : "&nbsp;");
+    parseRules(rules);
+    draw();
+  } catch (err) {
+    toast(err);
+  }
+}
+
 // Loads and draws
 function load() {
   try {
@@ -917,16 +930,7 @@ function load() {
     }
     var reader = new FileReader();
     reader.onload = function(e) {
-      try {
-        // Evals the result
-        initial = null;
-        eval(reader.result);
-        d3.select("#title").html((title) ? title : "&nbsp;");
-        parseRules(rules);
-        draw();
-      } catch (err) {
-        toast(err);
-      }
+      parseConfigAndDraw(reader.result);
     }
     reader.readAsText(file);
   }
@@ -935,13 +939,18 @@ function load() {
   }
 }
 
+// Displays file name and load it
+function displayFileName(fileName) {
+  d3.select("#selFile").text("File: " + fileName);
+  d3.select("#ruleH").text("Rules");
+}
+
 // Adds load event
 d3.select("#load")
   .on("change", function() {
     // Displays file name
-    fileName = d3.select(this).property("value").replace(/^C:\\fakepath\\/, "");
-    d3.select("#selFile").text("File: " + fileName);
-    d3.select("#ruleH").text("Rules");
+    var fileName = d3.select(this).property("value").replace(/^C:\\fakepath\\/, "");
+    displayFileName(fileName);
     load();
   });
 
@@ -968,3 +977,12 @@ d3.select("#draw")
     }
   });
 
+// Loads the default config file
+window.onload = function() {
+  // Default file name
+  var fileName = "Default";
+  displayFileName(fileName);
+
+  // No config text to parse, because it was already loaded
+  parseConfigAndDraw();
+}
