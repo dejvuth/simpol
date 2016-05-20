@@ -1,5 +1,10 @@
+// Title of the simulation
 title = "MAJORITY";
-//opacity = 0.6;
+
+// Color opacity of nodes
+opacity = 0.5;
+
+// Output attributes
 outputs = {
   "yes": {
     "color": "green"
@@ -8,6 +13,10 @@ outputs = {
     "color": "red"
   },
 };
+
+// *** States ***
+// A collection of key-value pairs.
+// Keys are state names, whereas values are objects, defining state properties
 states = {
   "AY": {
     "output": "yes",
@@ -30,12 +39,17 @@ states = {
     "init": 0
   },
 };
+
+// *** Initial states ***
+// An array of state names.
+// Used only for highlighting purpose.
 initial = ["AY", "AN"];
+
+// *** Rules ***
+// An array of strings, defining transitions between comma-separated pairs of states
 rules = [
   "AY, AN -> PY, PY",
   "AY, PN -> AY, PY",
   "AN, PY -> AN, PN",
   "PY, PN -> PY, PY",
-  //"AY, AY -> PY, PY",
-  //"PN, PN -> PY, PY",
 ];
