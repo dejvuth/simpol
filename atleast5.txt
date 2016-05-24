@@ -1,0 +1,61 @@
+title = "At least 5";
+//opacity = 0.6;
+outputs = {
+  "yes": {
+    "color": "green"
+  },
+  "no": {
+    "color": "red"
+  },
+};
+states = {
+  "Q1": {
+    "output": "no",
+    "label": 1,
+    "init": 10
+  },
+  "Q2": {
+    "output": "no",
+    "label": 2,
+    "init": 0
+  },
+  "Q3": {
+    "output": "no",
+    "label": 3,
+    "init": 0
+  },
+  "Q4": {
+    "output": "no",
+    "label": 4,
+    "init": 0
+  },
+  "Q5": {
+    "output": "yes",
+    "label": 5,
+    "init": 0
+  },
+  "P": {
+    "output": "no",
+    "label": "P",
+    "init": 0
+  },
+};
+initial = ["Q1"];
+rules = [
+  "Q1, Q1 -> Q2, P",
+  "Q2, Q1 -> Q3, P",
+  "Q3, Q1 -> Q4, P",
+  "Q4, Q1 -> Q5, P",
+  "Q5, Q1 -> Q5, P",
+  "Q2, Q2 -> Q4, P",
+  "Q2, Q3 -> Q5, P",
+  "Q2, Q4 -> Q5, P",
+  "Q2, Q5 -> P, Q5",
+  "Q3, Q3 -> Q5, P",
+  "Q3, Q4 -> Q5, P",
+  "Q3, Q5 -> P, Q5",
+  "Q4, Q4 -> Q5, P",
+  "Q4, Q5 -> P, Q5",
+  "Q5, P  -> Q5, Q5",
+];
+

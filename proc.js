@@ -36,6 +36,9 @@ var robjs;    // [ states: [[id,s1], [id,s2], [id,t1], [id,t2]] ]
 function parseRules(rr) {
   stateNames = [];
   for (var s in states) {
+    if (s.match(/^\d+$/)) {
+      throw "State name " + s + " contains only number(s)";
+    }
     if (!s.match(/^\w+$/)) {
       throw "State name " + s + " is not alphanumeric";
     }
